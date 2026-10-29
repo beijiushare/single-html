@@ -69,8 +69,22 @@
     z-index: 1;
     pointer-events: none;
     background:
-      radial-gradient(120% 90% at 50% 45%, transparent 30%, rgba(0, 0, 0, .34) 75%, rgba(0, 0, 0, .72) 100%),
-      linear-gradient(180deg, rgba(0, 0, 0, .46), transparent 22%, transparent 64%, rgba(0, 0, 0, .52));
+      radial-gradient(120% 90% at 50% 45%, transparent 36%, rgba(0, 0, 0, .26) 78%, rgba(0, 0, 0, .58) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, .36), transparent 24%, transparent 68%, rgba(0, 0, 0, .42));
+  }
+
+  #stage:not(.title-mode) .bg-layer {
+    filter: brightness(1.7) saturate(1.03);
+  }
+
+  #stage.title-mode #vignette {
+    background:
+      radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, .05) 85%, rgba(0, 0, 0, .2) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, .06), transparent 30%, transparent 74%, rgba(0, 0, 0, .14));
+  }
+
+  #stage.title-mode .bg-layer {
+    filter: brightness(2) saturate(1.1) contrast(1.02);
   }
 
   /* ==========================================================
@@ -536,6 +550,12 @@
     background: linear-gradient(90deg, rgba(2, 7, 12, .94) 0%, rgba(2, 7, 12, .68) 48%, rgba(2, 7, 12, .18) 100%);
   }
 
+  #stage.title-mode #title-screen {
+    background:
+      linear-gradient(90deg, rgba(2, 7, 12, .62) 0%, rgba(2, 7, 12, .32) 38%, rgba(2, 7, 12, .04) 68%, rgba(2, 7, 12, 0) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, .06), transparent 30%, transparent 74%, rgba(0, 0, 0, .14));
+  }
+
   .title-inner {
     flex: 1 1 auto;
     min-width: 0;
@@ -557,6 +577,7 @@
     font-weight: 500;
     letter-spacing: .28em;
     color: #5eead4;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .75);
   }
 
   .title-members ul {
@@ -568,8 +589,9 @@
   .title-members li {
     font-size: clamp(17px, 1.3cqw, 21px);
     line-height: 1.85;
-    color: #b9ccd9;
+    color: #d2e1eb;
     white-space: nowrap;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .75);
   }
 
   @keyframes titleIn {
@@ -608,13 +630,15 @@
     font-size: clamp(14px, 1.35cqw, 21px);
     letter-spacing: .04em;
     color: #d5e2ec;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .7);
   }
 
   .title-desc {
     margin-bottom: clamp(16px, 2.4cqh, 28px);
     font-size: clamp(11.5px, .92cqw, 15px);
     line-height: 1.95;
-    color: #8ea6b8;
+    color: #a9c0d0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
   }
 
   #start-btn {
@@ -641,7 +665,8 @@
     margin-top: clamp(10px, 1.8cqh, 18px);
     font-size: clamp(8px, .58cqw, 10px);
     letter-spacing: .12em;
-    color: #587485;
+    color: #6f8fa4;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
   }
 
   /* ==========================================================
@@ -1004,7 +1029,7 @@
 </div>
 
 <!-- 固定 16:9 游戏舞台 -->
-<main id="stage" aria-label="台风应急模拟器游戏区域">
+<main id="stage" class="title-mode" aria-label="台风应急模拟器游戏区域">
   <div id="bg-wrap">
     <div class="bg-layer"></div>
     <div class="bg-layer"></div>
@@ -1719,6 +1744,7 @@ const shownTipNodes = new Set();
 /* ============================================================
    三、DOM 引用
    ============================================================ */
+const stage = document.getElementById("stage");
 const bgLayers = Array.from(document.querySelectorAll(".bg-layer"));
 const portraitImg = document.getElementById("portrait-img");
 const chapterLabel = document.getElementById("chapter-label");
@@ -2254,6 +2280,7 @@ function beginGame() {
 
   fullscreenPromptOpen = false;
   fsPrompt.classList.add("hidden");
+  stage.classList.remove("title-mode");
   resetState();
   gameStarted = true;
   gameEnded = false;
@@ -2291,6 +2318,7 @@ function restartGame() {
   uiBottom.classList.add("hidden");
   uiBottom.classList.remove("fade-out");
   titleScreen.classList.remove("hidden");
+  stage.classList.add("title-mode");
 
   setBackground("bg_title");
   setChapter("");
