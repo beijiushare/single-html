@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>台风应急模拟器 | 城市管理者防灾推演</title>
+<style>
+  /* ==========================================================
+     全局：16:9 固定舞台，不足部分留黑
+     ========================================================== */
+  :root { color-scheme: dark; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+  }
+
+  body {
+    font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+    color: #e9f2f9;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button { font-family: inherit; }
+  .hidden { display: none !important; }
+
+  /* 舞台永远是 16:9，居中；四周由 body 的纯黑形成信箱边 */
+  #stage {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(100vw, 177.78vh);
+    width: min(100vw, 177.78dvh);
+    height: min(100vh, 56.25vw);
+    height: min(100dvh, 56.25vw);
+    overflow: hidden;
+    background: #02060c;
+    isolation: isolate;
+    container-type: size;
+    container-name: stage;
+  }
+
+  /* ==========================================================
+     背景层：双层交叉淡入
+     ========================================================== */
+  #bg-wrap { position: absolute; inset: 0; z-index: 0; background: #02060c; }
+
+  .bg-layer {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1.1s ease;
+    will-change: opacity;
+  }
+
+  #vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% 45%, transparent 30%, rgba(0, 0, 0, .34) 75%, rgba(0, 0, 0, .72) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, .46), transparent 22%, transparent 64%, rgba(0, 0, 0, .52));
+  }
+
+  /* ==========================================================
+     人物立绘层：背景之上、对话框之下
+     ========================================================== */
+  #portrait-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  #portrait-img {
+    position: absolute;
+    right: clamp(14px, 3.6cqw, 56px);
+    bottom: 0;
+    height: 80%;
+    width: auto;
+    max-width: 46%;
+    object-fit: contain;
+    object-position: bottom center;
+    opacity: 0;
+    transform: translate3d(16px, 10px, 0) scale(.985);
+    transform-origin: bottom center;
+    transition: opacity .32s ease, transform .45s cubic-bezier(.2, .8, .2, 1);
+    filter: drop-shadow(0 10px 28px rgba(0, 0, 0, .5));
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  #portrait-img.show {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  @container stage (max-height: 420px) {
+    #portrait-img {
+      height: 76%;
+      right: clamp(10px, 2.6cqw, 28px);
+    }
+  }
+
+  /* ==========================================================
+     顶部状态栏
+     ========================================================== */
+  #hud {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 30;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: clamp(10px, 2.2cqh, 28px) clamp(14px, 3.4cqw, 64px) 0;
+    pointer-events: none;
+  }
+
+  .brand { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-top: 4px; }
+
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(8px, .58cqw, 10px);
+    letter-spacing: .28em;
+    color: #fbbf24;
+  }
+
+  .brand-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 8px rgba(251, 191, 36, .9);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: .45; }
+    50% { opacity: 1; }
+  }
+
+  .brand-name {
+    font-size: clamp(11px, .85cqw, 15px);
+    letter-spacing: .16em;
+    color: #cfe2ef;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .brand-sub {
+    font-size: clamp(7px, .5cqw, 9px);
+    letter-spacing: .3em;
+    color: #5e7e93;
+    white-space: nowrap;
+  }
+
+  .stats {
+    display: flex;
+    gap: clamp(5px, .55cqw, 10px);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stat {
+    min-width: clamp(52px, 5.2cqw, 88px);
+    padding: clamp(5px, .8cqh, 10px) clamp(7px, .8cqw, 14px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(4, 11, 20, .62);
+    border: 1px solid rgba(120, 200, 220, .18);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    transition: border-color .3s, box-shadow .3s;
+  }
+
+  .stat-label {
+    font-size: clamp(8px, .56cqw, 10px);
+    letter-spacing: .18em;
+    color: #7f9daf;
+  }
+
+  .stat-value {
+    font-size: clamp(14px, 1.05cqw, 20px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: #eaf4fb;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-time { border-color: rgba(251, 191, 36, .4); }
+  .stat-time .stat-value { color: #fbbf24; }
+  .stat-value.warn { color: #f87171; }
+  .stat-value.caution { color: #fbbf24; }
+
+  .stat.bump { animation: bump .35s ease; }
+
+  @keyframes bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  /* ==========================================================
+     章节标识与数值飘字
+     ========================================================== */
+  #chapter-label {
+    position: absolute;
+    z-index: 25;
+    top: clamp(56px, 9.5cqh, 98px);
+    left: clamp(14px, 3.4cqw, 64px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(9px, .62cqw, 12px);
+    letter-spacing: .3em;
+    color: #7fa3b8;
+    opacity: 0;
+    transition: opacity .5s ease;
+    pointer-events: none;
+  }
+
+  #chapter-label::before {
+    content: "";
+    width: clamp(14px, 1.6cqw, 26px);
+    height: 1px;
+    background: #5eead4;
+    opacity: .6;
+  }
+
+  #chapter-label.show { opacity: .92; }
+
+  #toast-wrap {
+    position: absolute;
+    z-index: 35;
+    top: clamp(58px, 10cqh, 108px);
+    right: clamp(14px, 3.4cqw, 64px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    pointer-events: none;
+  }
+
+  .toast {
+    font-size: clamp(10px, .7cqw, 12px);
+    letter-spacing: .08em;
+    padding: 4px 9px;
+    border-radius: 4px;
+    background: rgba(4, 11, 20, .86);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #dbe9f3;
+    animation: toastIn 1.6s ease forwards;
+  }
+
+  .toast.good { color: #5eead4; border-color: rgba(94, 234, 212, .35); }
+  .toast.bad { color: #f87171; border-color: rgba(248, 113, 113, .35); }
+
+  @keyframes toastIn {
+    0% { opacity: 0; transform: translateY(-6px); }
+    12% { opacity: 1; transform: translateY(0); }
+    78% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-8px); }
+  }
+
+  /* ==========================================================
+     底部：选项 + 对话框
+     ========================================================== */
+  #ui-bottom {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(38px, 4.4cqh, 48px);
+    padding: 0 clamp(14px, 3.4cqw, 64px) clamp(10px, 2.4cqh, 30px);
+    pointer-events: none;
+    transition: opacity .4s ease;
+  }
+
+  #ui-bottom.fade-out { opacity: 0; }
+
+  #choices {
+    width: min(520px, 92%);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, .9cqh, 10px);
+    pointer-events: auto;
+  }
+
+  .choice-label {
+    font-size: clamp(8px, .56cqw, 10px);
+    letter-spacing: .3em;
+    color: #7f9daf;
+    padding-left: 2px;
+  }
+
+  .choice-btn {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    padding: clamp(9px, 1.35cqh, 15px) clamp(11px, 1.1cqw, 18px);
+    background: rgba(4, 11, 20, .55);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 8px;
+    color: #dfeaf3;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    transition: transform .22s ease, background .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+
+  .choice-btn::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #5eead4;
+    opacity: 0;
+    transition: opacity .22s ease;
+  }
+
+  .choice-btn:hover,
+  .choice-btn:focus-visible {
+    transform: translateX(-6px);
+    background: rgba(94, 234, 212, .13);
+    border-color: rgba(94, 234, 212, .7);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    color: #fff;
+    outline: none;
+  }
+
+  .choice-btn:hover::before,
+  .choice-btn:focus-visible::before { opacity: 1; }
+
+  .choice-index {
+    flex: 0 0 auto;
+    font-size: clamp(9px, .62cqw, 11px);
+    color: #5eead4;
+    border: 1px solid rgba(94, 234, 212, .4);
+    border-radius: 3px;
+    padding: 1px 4px;
+    letter-spacing: .05em;
+  }
+
+  .choice-text {
+    font-size: clamp(12.5px, 1.02cqw, 16px);
+    line-height: 1.45;
+    letter-spacing: .02em;
+  }
+
+  .choice-btn.enter { animation: choiceIn .3s ease both; }
+
+  @keyframes choiceIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #dialog-wrap { width: 100%; pointer-events: auto; }
+
+  #dialog {
+    position: relative;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(13px, 2.2cqh, 26px) clamp(14px, 1.5cqw, 30px) clamp(20px, 2.8cqh, 30px);
+    background: linear-gradient(145deg, rgba(10, 24, 36, .9), rgba(3, 9, 17, .87));
+    border: 1px solid rgba(120, 200, 220, .2);
+    border-radius: 12px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+  }
+
+  #dialog::after {
+    content: "";
+    position: absolute;
+    left: clamp(14px, 1.5cqw, 30px);
+    right: clamp(14px, 1.5cqw, 30px);
+    bottom: clamp(9px, 1.4cqh, 14px);
+    height: 1px;
+    background: linear-gradient(90deg, rgba(94, 234, 212, .32), transparent 65%);
+    pointer-events: none;
+  }
+
+  .speaker {
+    position: absolute;
+    top: calc(-1 * clamp(24px, 4.2cqh, 34px));
+    left: clamp(14px, 1.5cqw, 26px);
+    padding: clamp(4px, .7cqh, 7px) clamp(10px, 1cqw, 16px);
+    background: #0a1a26;
+    border: 1px solid rgba(94, 234, 212, .35);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    font-size: clamp(10px, .78cqw, 14px);
+    letter-spacing: .16em;
+    color: #7ff3df;
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, .25);
+  }
+
+  .speaker.narrator { color: #9fb4c3; border-color: rgba(159, 180, 195, .3); }
+  .speaker.mayor { color: #fbbf24; border-color: rgba(251, 191, 36, .45); }
+
+  .text {
+    min-height: 3.4em;
+    font-size: clamp(14px, 1.28cqw, 21px);
+    line-height: 1.9;
+    letter-spacing: .02em;
+    color: #eaf3fa;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .55);
+  }
+
+  .continue-hint {
+    position: absolute;
+    right: clamp(14px, 1.5cqw, 30px);
+    bottom: clamp(8px, 1.2cqh, 12px);
+    font-size: clamp(8px, .56cqw, 10px);
+    letter-spacing: .24em;
+    color: #6d8b9e;
+    animation: blink 1.6s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: .35; }
+    50% { opacity: 1; }
+  }
+
+  /* ==========================================================
+     科普弹窗
+     ========================================================== */
+  #tip-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    padding: clamp(16px, 3cqw, 40px);
+    background: rgba(1, 5, 10, .72);
+    backdrop-filter: blur(10px);
+  }
+
+  .tip-card {
+    width: min(620px, 92%);
+    max-height: 86cqh;
+    overflow-y: auto;
+    padding: clamp(18px, 2.6cqw, 34px);
+    background: linear-gradient(165deg, #0c1d2a, #050d16);
+    border: 1px solid rgba(251, 191, 36, .35);
+    border-top: 3px solid #fbbf24;
+    border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .65);
+    animation: modalIn .35s cubic-bezier(.2, .9, .3, 1) both;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(.98); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .tip-kicker {
+    margin-bottom: 10px;
+    font-size: clamp(9px, .62cqw, 11px);
+    letter-spacing: .3em;
+    color: #fbbf24;
+  }
+
+  .tip-card h2 {
+    margin-bottom: 12px;
+    font-size: clamp(18px, 1.7cqw, 26px);
+    line-height: 1.35;
+    font-weight: 700;
+    color: #f8fbfd;
+  }
+
+  .tip-card p {
+    margin-bottom: clamp(16px, 2.2cqh, 24px);
+    font-size: clamp(12.5px, 1.02cqw, 15.5px);
+    line-height: 1.95;
+    color: #b9ccd9;
+    text-align: justify;
+  }
+
+  .tip-card button {
+    display: block;
+    width: 100%;
+    padding: clamp(10px, 1.3cqh, 14px);
+    background: rgba(251, 191, 36, .12);
+    border: 1px solid rgba(251, 191, 36, .6);
+    border-radius: 7px;
+    color: #ffd77a;
+    font-size: clamp(12px, .9cqw, 14px);
+    letter-spacing: .2em;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  .tip-card button:hover { background: #fbbf24; color: #1a1204; }
+  .tip-card button:focus { outline: none; }
+  .tip-card button:focus-visible { box-shadow: inset 0 0 0 2px rgba(255, 215, 122, .95); }
+
+  /* ==========================================================
+     标题页
+     ========================================================== */
+  #title-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    padding: 0 clamp(24px, 9cqw, 150px);
+    background: linear-gradient(90deg, rgba(2, 7, 12, .94) 0%, rgba(2, 7, 12, .68) 48%, rgba(2, 7, 12, .18) 100%);
+  }
+
+  .title-inner {
+    max-width: min(720px, 80%);
+    animation: titleIn .8s ease both;
+  }
+
+  @keyframes titleIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .title-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(9px, .7cqw, 13px);
+    letter-spacing: .38em;
+    color: #5eead4;
+  }
+
+  .title-eyebrow::before {
+    content: "";
+    width: clamp(18px, 2cqw, 34px);
+    height: 1px;
+    background: #5eead4;
+  }
+
+  .title-inner h1 {
+    margin: clamp(10px, 1.6cqh, 22px) 0 clamp(8px, 1.4cqh, 18px);
+    font-size: clamp(42px, 7.2cqw, 98px);
+    line-height: 1.02;
+    letter-spacing: .06em;
+    font-weight: 800;
+    color: #f3f8fc;
+    text-shadow: 0 12px 50px rgba(0, 0, 0, .6);
+  }
+
+  .title-sub {
+    margin-bottom: clamp(10px, 1.4cqh, 18px);
+    font-size: clamp(14px, 1.35cqw, 21px);
+    letter-spacing: .04em;
+    color: #d5e2ec;
+  }
+
+  .title-desc {
+    margin-bottom: clamp(16px, 2.4cqh, 28px);
+    font-size: clamp(11.5px, .92cqw, 15px);
+    line-height: 1.95;
+    color: #8ea6b8;
+  }
+
+  #start-btn {
+    padding: clamp(11px, 1.5cqh, 16px) clamp(22px, 2.2cqw, 34px);
+    background: rgba(94, 234, 212, .1);
+    border: 1px solid rgba(94, 234, 212, .8);
+    border-radius: 6px;
+    color: #c9fff6;
+    font-size: clamp(12px, .95cqw, 15px);
+    letter-spacing: .26em;
+    cursor: pointer;
+    transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+  }
+
+  #start-btn:hover,
+  #start-btn:focus-visible {
+    background: #5eead4;
+    color: #03110e;
+    box-shadow: 0 0 30px rgba(94, 234, 212, .3);
+    outline: none;
+  }
+
+  .title-note {
+    margin-top: clamp(10px, 1.8cqh, 18px);
+    font-size: clamp(8px, .58cqw, 10px);
+    letter-spacing: .12em;
+    color: #587485;
+  }
+
+  /* ==========================================================
+     结局结算
+     ========================================================== */
+  #ending-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(14px, 3cqw, 36px);
+    overflow: auto;
+    background: linear-gradient(180deg, rgba(1, 5, 10, .7), rgba(1, 5, 10, .92));
+    backdrop-filter: blur(4px);
+  }
+
+  .ending-card {
+    width: min(820px, 96%);
+    max-height: 92cqh;
+    overflow-y: auto;
+    padding: clamp(20px, 3.2cqw, 44px);
+    background: linear-gradient(165deg, rgba(10, 25, 38, .97), rgba(3, 9, 17, .98));
+    border: 1px solid rgba(94, 234, 212, .22);
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 30px 100px rgba(0, 0, 0, .7);
+    animation: modalIn .45s ease both;
+  }
+
+  .ending-kicker {
+    font-size: clamp(9px, .62cqw, 11px);
+    letter-spacing: .35em;
+    color: #7fa3b8;
+  }
+
+  .ending-grade {
+    margin-top: clamp(4px, .8cqh, 10px);
+    font-size: clamp(54px, 8cqw, 92px);
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .02em;
+  }
+
+  .ending-grade.grade-s { color: #5eead4; text-shadow: 0 0 40px rgba(94, 234, 212, .35); }
+  .ending-grade.grade-a { color: #fbbf24; text-shadow: 0 0 40px rgba(251, 191, 36, .3); }
+  .ending-grade.grade-c { color: #f87171; text-shadow: 0 0 40px rgba(248, 113, 113, .3); }
+
+  .ending-card h2 {
+    margin: 4px 0 10px;
+    font-size: clamp(22px, 2.1cqw, 32px);
+    color: #f2f8fc;
+  }
+
+  .ending-desc {
+    max-width: 620px;
+    margin: 0 auto;
+    font-size: clamp(12px, 1cqw, 15px);
+    line-height: 1.95;
+    color: #a9bfcf;
+  }
+
+  .ending-label {
+    margin-top: clamp(12px, 2cqh, 22px);
+    font-size: clamp(8px, .56cqw, 10px);
+    letter-spacing: .28em;
+    color: #6f8fa4;
+  }
+
+  .ending-recap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 8px 0 clamp(12px, 2cqh, 22px);
+  }
+
+  .recap-chip {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, .04);
+    font-size: clamp(9px, .68cqw, 11px);
+    letter-spacing: .04em;
+    color: #a8c4d5;
+  }
+
+  .recap-chip b { margin-right: 4px; color: #5eead4; font-weight: 600; }
+
+  .ending-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: clamp(12px, 2cqh, 22px) 0;
+  }
+
+  .end-stat {
+    padding: clamp(8px, 1.2cqh, 12px) 6px;
+    background: rgba(255, 255, 255, .035);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 8px;
+  }
+
+  .end-stat span {
+    display: block;
+    margin-bottom: 3px;
+    font-size: clamp(8px, .58cqw, 10px);
+    letter-spacing: .18em;
+    color: #7895a8;
+  }
+
+  .end-stat strong {
+    font-size: clamp(16px, 1.5cqw, 23px);
+    color: #eaf4fb;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ending-tips {
+    margin-bottom: clamp(12px, 2cqh, 20px);
+    font-size: clamp(9px, .68cqw, 11px);
+    letter-spacing: .08em;
+    color: #7e9caf;
+  }
+
+  #restart-btn {
+    padding: clamp(10px, 1.3cqh, 14px) clamp(24px, 2.4cqw, 38px);
+    background: rgba(251, 191, 36, .1);
+    border: 1px solid rgba(251, 191, 36, .65);
+    border-radius: 6px;
+    color: #ffd77a;
+    font-size: clamp(12px, .9cqw, 14px);
+    letter-spacing: .22em;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  #restart-btn:hover { background: #fbbf24; color: #1a1204; }
+  #restart-btn:focus { outline: none; }
+  #restart-btn:focus-visible { box-shadow: inset 0 0 0 2px rgba(255, 215, 122, .95); }
+
+  /* ==========================================================
+     手机竖屏提示：强制横屏体验
+     ========================================================== */
+  #rotate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    place-items: center;
+    padding: 28px;
+    background: #000;
+    text-align: center;
+  }
+
+  @media (orientation: portrait) and (max-width: 900px) {
+    #rotate-overlay { display: grid; }
+  }
+
+  .rotate-inner { max-width: 420px; }
+
+  .rotate-phone {
+    position: relative;
+    width: 42px;
+    height: 74px;
+    margin: 0 auto 26px;
+    border: 2px solid #5eead4;
+    border-radius: 8px;
+    animation: rotatePhone 2.2s ease-in-out infinite;
+  }
+
+  .rotate-phone::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    width: 12px;
+    height: 2px;
+    border-radius: 2px;
+    background: #5eead4;
+    opacity: .6;
+    transform: translateX(-50%);
+  }
+
+  @keyframes rotatePhone {
+    0%, 20% { transform: rotate(0); }
+    55%, 80% { transform: rotate(90deg); }
+    100% { transform: rotate(0); }
+  }
+
+  #rotate-overlay h2 {
+    margin-bottom: 12px;
+    font-size: 22px;
+    letter-spacing: .2em;
+    color: #eaf4fb;
+  }
+
+  #rotate-overlay p {
+    font-size: 13px;
+    line-height: 1.9;
+    letter-spacing: .04em;
+    color: #7f9daf;
+  }
+
+  /* ==========================================================
+     短屏 / 小舞台适配：仍保持 16:9，只压缩留白
+     ========================================================== */
+  @container stage (max-width: 900px) {
+    .brand-sub { display: none; }
+    #chapter-label { display: none; }
+    .stat { min-width: 48px; padding: 4px 7px; }
+  }
+
+  @container stage (max-height: 520px) {
+    #choices { width: 100%; flex-direction: row; }
+    .choice-btn { flex: 1 1 0; min-width: 0; }
+    .choice-btn:hover { transform: translateY(-2px); }
+    .choice-label { display: none; }
+    .title-desc { display: none; }
+    .title-note { margin-top: 10px; font-size: 10px; line-height: 1.6; }
+    .title-inner { max-width: 90%; }
+    .tip-card p { margin-bottom: 12px; }
+  }
+
+  @container stage (max-height: 460px) {
+    .title-inner h1 { font-size: clamp(36px, 6.6cqw, 56px); }
+    .title-sub { font-size: 13px; }
+    .title-eyebrow { font-size: 9px; }
+    .tip-card h2 { font-size: 17px; }
+    .ending-card { padding: 18px; }
+    .ending-grade { font-size: 48px; }
+    .ending-recap { display: none; }
+  }
+
+  /* 尊重系统的“减少动态效果”设置 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 强制横屏提示：仅在触屏设备的竖屏方向出现 -->
+<div id="rotate-overlay" aria-hidden="true">
+  <div class="rotate-inner">
+    <div class="rotate-phone"></div>
+    <h2>请横屏游玩</h2>
+    <p>将手机旋转为横向，获得完整的 16:9 指挥中心视野。<br>若屏幕被锁定，请先关闭系统的竖屏锁定。</p>
+  </div>
+</div>
+
+<!-- 固定 16:9 游戏舞台 -->
+<main id="stage" aria-label="台风应急模拟器游戏区域">
+  <div id="bg-wrap">
+    <div class="bg-layer"></div>
+    <div class="bg-layer"></div>
+    <div id="vignette"></div>
+  </div>
+
+  <!-- 人物立绘层 -->
+  <div id="portrait-layer" aria-hidden="true">
+    <img id="portrait-img" alt="" decoding="async" draggable="false">
+  </div>
+
+  <!-- 顶部状态栏 -->
+  <header id="hud">
+    <div class="brand">
+      <div class="brand-mark"><span class="brand-dot"></span>LIVE · 应急响应</div>
+      <div class="brand-name">滨江市防汛防台指挥部</div>
+      <div class="brand-sub">TYPHOON EMERGENCY COMMAND</div>
+    </div>
+    <div class="stats" aria-label="城市状态">
+      <div class="stat stat-time" data-stat="time">
+        <span class="stat-label" id="time-label">距登陆</span>
+        <span class="stat-value" id="time-value">72h</span>
+      </div>
+      <div class="stat" data-stat="morale">
+        <span class="stat-label">民心</span>
+        <span class="stat-value" id="morale-value">60</span>
+      </div>
+      <div class="stat" data-stat="casualties">
+        <span class="stat-label">伤亡</span>
+        <span class="stat-value" id="casualties-value">0</span>
+      </div>
+      <div class="stat" data-stat="funds">
+        <span class="stat-label">资金</span>
+        <span class="stat-value" id="funds-value">100</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="chapter-label"></div>
+  <div id="toast-wrap" aria-live="polite"></div>
+
+  <!-- 底部：选项 + 对话框（标题页时隐藏） -->
+  <div id="ui-bottom" class="hidden">
+    <div id="choices" class="hidden" aria-label="关键决策"></div>
+    <div id="dialog-wrap">
+      <div id="dialog" role="button" tabindex="0" aria-label="剧情对话框，点击继续">
+        <div id="speaker" class="speaker narrator">旁白</div>
+        <div id="text" class="text" aria-live="polite"></div>
+        <div id="continue-hint" class="continue-hint hidden">点击继续</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 科普弹窗 -->
+  <div id="tip-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tip-title">
+    <div class="tip-card">
+      <div class="tip-kicker">防灾小课堂</div>
+      <h2 id="tip-title"></h2>
+      <p id="tip-body"></p>
+      <button id="tip-close" type="button">我知道了</button>
+    </div>
+  </div>
+
+  <!-- 标题页 -->
+  <section id="title-screen" aria-label="标题页">
+    <div class="title-inner">
+      <div class="title-eyebrow">城市应急推演 · 视觉小说</div>
+      <h1>台风应急<br>模拟器</h1>
+      <p class="title-sub">48小时，一座城，和你的每一个决定。</p>
+      <p class="title-desc">你是滨江市市长。超强台风“海燕”正面来袭。<br>预警、转移、调度、辟谣、复盘——每一步都关乎生死。</p>
+      <button id="start-btn" type="button">进入指挥中心</button>
+      <div class="title-note">全程约 4 分钟 · 点击对话推进 · 建议横屏体验<br>城市、人物与事件均为虚构，仅用于防灾科普教学。</div>
+    </div>
+  </section>
+
+  <!-- 结局结算 -->
+  <section id="ending-screen" class="hidden" aria-label="结局结算">
+    <div class="ending-card">
+      <div class="ending-kicker">推演结束 · 灾后复盘</div>
+      <div id="ending-grade" class="ending-grade grade-s">S</div>
+      <h2 id="ending-title"></h2>
+      <p id="ending-desc" class="ending-desc"></p>
+      <div class="ending-label">关键决策回顾</div>
+      <div id="ending-recap" class="ending-recap"></div>
+      <div id="ending-stats" class="ending-stats"></div>
+      <div id="ending-tips" class="ending-tips"></div>
+      <button id="restart-btn" type="button">重新推演</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============================================================
+   一、剧情数据
+   说明：
+   - id：节点编号
+   - bg：背景图名（对应 ./images/ 下的 webp）
+   - time：距登陆时间
+   - speaker：说话人
+   - text：台词（单句控制在 50 字以内）
+   - nextId：下一节点
+   - options：关键决策，含 effect 与跳转
+   - tip：科普弹窗，关闭后再进入 nextId
+   ============================================================ */
+
+/* GAME_DATA_START */
+const gameData = {
+  startId: "s0_1",
+  initialState: { morale: 60, casualties: 0, funds: 100, time: "72h" },
+  nodes: {
+
+    /* ---------------- 序章 ---------------- */
+    s0_1: {
+      bg: "bg_hq", time: "72h", scene: "序章 · 风暴将至", speaker: "旁白",
+      text: "9月12日，第14号台风“海燕”生成，路径直指滨江市。",
+      nextId: "s0_2"
+    },
+    s0_2: {
+      bg: "bg_hq", speaker: "秘书长",
+      text: "市长，气象局刚送来会商结果——三天后正面登陆。",
+      nextId: "s0_3"
+    },
+    s0_3: {
+      bg: "bg_hq", speaker: "气象局长",
+      text: "最强可达17级，是本市十年来遇到的最强台风。",
+      nextId: "s0_3b"
+    },
+    s0_3b: {
+      speaker: "气象局长",
+      text: "它的云系直径超过一千公里，登陆时恰逢天文大潮。",
+      nextId: "s0_3c"
+    },
+    s0_3c: {
+      speaker: "市长",
+      text: "通知所有区县一把手，一小时后开防台紧急会议。",
+      nextId: "s0_4"
+    },
+    s0_4: {
+      bg: "bg_hq", speaker: "市长",
+      text: "把数据全部投上大屏。我要知道最坏的情况。",
+      nextId: "s0_5"
+    },
+    s0_5: {
+      bg: "bg_hq", speaker: "旁白",
+      text: "你按下桌上的红色按钮，全市应急体系开始转动。",
+      nextId: "s1_1"
+    },
+
+    /* ---------------- 第一幕：预警与部署 ---------------- */
+    s1_1: {
+      bg: "bg_meteorology", time: "48h", scene: "第一幕 · 预警与部署", speaker: "旁白",
+      text: "距登陆48小时。台风橙色预警生效，全市进入Ⅱ级应急响应。",
+      nextId: "s1_2"
+    },
+    s1_2: {
+      bg: "bg_meteorology", speaker: "气象局长",
+      text: "登陆风力16级，过程雨量400毫米，风暴潮叠加天文大潮。",
+      nextId: "s1_3"
+    },
+    s1_3: {
+      bg: "bg_meteorology", speaker: "应急局长",
+      text: "沿海三区需转移十二万人，安置点只备好一半。",
+      nextId: "s1_3b"
+    },
+    s1_3b: {
+      speaker: "民政局长",
+      text: "安置点缺折叠床和饮用水，正常采购最快也要六小时。",
+      nextId: "s1_3c"
+    },
+    s1_3c: {
+      speaker: "市长",
+      text: "走应急采购，先拨付、后补手续，今晚必须全部到位。",
+      nextId: "s1_4"
+    },
+    s1_4: {
+      bg: "bg_meteorology", speaker: "秘书长",
+      text: "若立刻“五停”，全市每天损失约七亿，企业意见很大。",
+      nextId: "s1_5"
+    },
+    s1_5: {
+      bg: "bg_meteorology", speaker: "市长",
+      text: "先回答我——不做任何措施，最坏会死多少人？",
+      nextId: "s1_6"
+    },
+    s1_6: {
+      bg: "bg_meteorology", speaker: "气象局长",
+      text: "模型区间三百到八百人。提前48小时“五停”，可压到个位数。",
+      nextId: "s1_choice"
+    },
+    s1_choice: {
+      bg: "bg_meteorology", speaker: "市长",
+      text: "时间、金钱、人命，现在都要我签字。",
+      options: [
+        {
+          text: "立即启动全市“五停”",
+          tag: "立即五停",
+          effect: { morale: 10, funds: -25 },
+          nextId: "r1a"
+        },
+        {
+          text: "再等半天，观察台风路径",
+          tag: "观望半天",
+          effect: { morale: -5, casualties: 3 },
+          nextId: "r1b"
+        }
+      ]
+    },
+    r1a: {
+      bg: "bg_meteorology", speaker: "旁白",
+      text: "命令连夜下达。学校停课、工地停工、航班取消，城市按下暂停键。",
+      tip: {
+        title: "什么是“五停”？",
+        body: "五停，指停工、停课、停业、停产、停运。台风红色预警生效后，属地政府可依法启动。提前量比强度更重要：转移、加固、备勤都需要时间。防灾界有句话——“宁可十防九空，不可失防万一”。停一天的经济损失可以补回来，逝去的生命不能。"
+      },
+      nextId: "s2_1"
+    },
+    r1b: {
+      bg: "bg_meteorology", speaker: "旁白",
+      text: "半天后路径锁定，你才宣布“五停”。晚高峰的暴雨里，许多人被困在路上。",
+      tip: {
+        title: "预警提前量，值多少钱？",
+        body: "台风路径有不确定性，但“再等等”往往是把风险转嫁给市民。研究显示，提前24小时发布停工停课令，可显著减少户外伤亡。红色预警不是参考消息，而是行动指令。犹豫的成本，通常由最脆弱的人承担。"
+      },
+      nextId: "s2_1"
+    },
+
+    /* ---------------- 第二幕：基层冲突 ---------------- */
+    s2_1: {
+      bg: "bg_community", time: "24h", scene: "第二幕 · 基层冲突", speaker: "旁白",
+      text: "距登陆24小时。风雨渐起，城郊红砖老楼里还有两百多户没撤离。",
+      nextId: "s2_2"
+    },
+    s2_2: {
+      bg: "bg_community", speaker: "区干部",
+      text: "王大爷把门反锁了，说住了四十年，从没见房子塌过。",
+      nextId: "s2_3"
+    },
+    s2_3: {
+      bg: "bg_community", speaker: "市长",
+      text: "那栋楼什么年代建的？有没有危房鉴定？",
+      nextId: "s2_4"
+    },
+    s2_4: {
+      bg: "bg_community", speaker: "应急局长",
+      text: "1985年的预制板楼，C级危房。水位再涨一米，一楼就进水。",
+      nextId: "s2_5"
+    },
+    s2_5: {
+      bg: "bg_community", speaker: "区干部",
+      text: "老人有心脏病，硬抬怕出事，家属电话也打不通。",
+      nextId: "s2_5b"
+    },
+    s2_5b: {
+      speaker: "区干部",
+      text: "老人在屋里喊：我死也死在自己家里，哪也不去。",
+      nextId: "s2_5c"
+    },
+    s2_5c: {
+      speaker: "市长",
+      text: "把危房鉴定报告和撤离路线念给他听，先稳住情绪。",
+      nextId: "s2_6"
+    },
+    s2_6: {
+      bg: "bg_community", speaker: "市长",
+      text: "法律给了我们强制转移的权力。可人心呢？",
+      nextId: "s2_choice"
+    },
+    s2_choice: {
+      bg: "bg_community", speaker: "市长",
+      text: "楼里还有最后十七户。雨，正在变大。",
+      options: [
+        {
+          text: "依法强制带离，全程录像",
+          tag: "强制转移",
+          effect: { morale: -12, funds: -5 },
+          nextId: "r2a"
+        },
+        {
+          text: "柔性劝导，干部留下陪护",
+          tag: "柔性劝导",
+          effect: { morale: 6, casualties: 4 },
+          nextId: "r2b"
+        }
+      ]
+    },
+    r2a: {
+      bg: "bg_community", speaker: "旁白",
+      text: "执法人员背起老人下楼。骂声在雨里传出很远，但楼里最后一人撤了出来。",
+      tip: {
+        title: "为什么要“应转尽转”？",
+        body: "《防洪法》《突发事件应对法》规定，受洪水威胁人员必须服从转移命令；拒不转移的，可依法强制带离。C级危房在持续暴雨和风暴潮下极易倒塌，老旧小区又多为老人、病人。基层常说：宁可听骂声，不要听哭声。"
+      },
+      nextId: "s3_1"
+    },
+    r2b: {
+      bg: "bg_community", speaker: "旁白",
+      text: "干部陪老人守到深夜。凌晨水位暴涨，冲锋舟破窗而入，两名干部受伤。",
+      tip: {
+        title: "柔性劝导的边界",
+        body: "柔性劝导能减少对抗，但必须设“止损点”：水位、雨量或时间一到，立即转为强制转移。此次虽救出老人，却让救援人员暴露在风险中。基层处置要“情理法”结合，但安全底线不能讨价还价。"
+      },
+      nextId: "s3_1"
+    },
+
+    /* ---------------- 第三幕：资源枯竭 ---------------- */
+    s3_1: {
+      bg: "bg_pump", time: "12h", scene: "第三幕 · 资源枯竭", speaker: "旁白",
+      text: "距登陆12小时。暴雨红色预警，泵站满负荷，电网开始跳闸。",
+      nextId: "s3_2"
+    },
+    s3_2: {
+      bg: "bg_pump", speaker: "水务局长",
+      text: "三号泵站断电，备用电源只能撑四十分钟。",
+      nextId: "s3_2b"
+    },
+    s3_2b: {
+      speaker: "电力局长",
+      text: "移动发电车已经出发，但积水太深，车根本进不去。",
+      nextId: "s3_3"
+    },
+    s3_3: {
+      bg: "bg_pump", speaker: "市长",
+      text: "两个片区同时告急，排水往哪边调？",
+      nextId: "s3_4"
+    },
+    s3_4: {
+      bg: "bg_pump", speaker: "水务局长",
+      text: "保商业区，守住三十亿资产；保老城区，护住八万低洼住户。",
+      nextId: "s3_5"
+    },
+    s3_5: {
+      bg: "bg_pump", speaker: "秘书长",
+      text: "商业区有地铁枢纽和两所三甲医院，老城区大多是老旧小区。",
+      nextId: "s3_5b"
+    },
+    s3_5b: {
+      speaker: "水务局长",
+      text: "移动泵车只剩六台，老城区和商业区各要十台。",
+      nextId: "s3_6"
+    },
+    s3_6: {
+      bg: "bg_pump", speaker: "市长",
+      text: "把积水图调出来。水往低处走，人得往高处走。",
+      nextId: "s3_choice"
+    },
+    s3_choice: {
+      bg: "bg_pump", speaker: "市长",
+      text: "泵站的闸门，只能开向一边。",
+      options: [
+        {
+          text: "优先保商业区与三甲医院",
+          tag: "保商业区",
+          effect: { funds: 10, morale: -10, casualties: 6 },
+          nextId: "r3a"
+        },
+        {
+          text: "优先保老城区低洼住户",
+          tag: "保老城区",
+          effect: { funds: -15, morale: 10, casualties: 2 },
+          nextId: "r3b"
+        }
+      ]
+    },
+    r3a: {
+      bg: "bg_pump", speaker: "旁白",
+      text: "商业区保住了，地铁和医院运转正常。老城区积水漫过床沿，求救电话打爆热线。",
+      tip: {
+        title: "城市排水的优先级",
+        body: "防汛调度遵循“生命线工程优先”：医院、供水、供电、通信、交通枢纽必须优先保障。但“保资产”与“保人命”并非二选一，可动用调蓄池、移动泵车、分区错峰抽排。老城区管网标准低，是内涝中最脆弱的一环。"
+      },
+      nextId: "s4_1"
+    },
+    r3b: {
+      bg: "bg_pump", speaker: "旁白",
+      text: "老城区水位被压住，八万人免于浸泡。商业区地下车库进水，三百辆车泡在水里。",
+      tip: {
+        title: "海绵城市与调蓄",
+        body: "单靠泵站抽排，遇到超标准暴雨必然捉襟见肘。海绵城市通过透水铺装、下沉绿地、调蓄池，实现“渗、滞、蓄、净、用、排”。老城区改造难，可先布移动泵车和临时挡水板。调度要算清“水账”：先保人命，再保资产。"
+      },
+      nextId: "s4_1"
+    },
+
+    /* ---------------- 第四幕：信息恐慌 ---------------- */
+    s4_1: {
+      bg: "bg_rumor", time: "4h", scene: "第四幕 · 信息恐慌", speaker: "旁白",
+      text: "距登陆4小时。“青龙水库决堤”的视频疯传，超市货架被抢空。",
+      nextId: "s4_2"
+    },
+    s4_2: {
+      bg: "bg_rumor", speaker: "网信办主任",
+      text: "视频是三年前的旧闻，但转发量已经破百万。",
+      nextId: "s4_2b"
+    },
+    s4_2b: {
+      speaker: "网信办主任",
+      text: "谣言还配了一张伪造的红头文件，看着非常唬人。",
+      nextId: "s4_3"
+    },
+    s4_3: {
+      bg: "bg_rumor", speaker: "市长",
+      text: "水库真实情况怎么样？我要准确数字。",
+      nextId: "s4_4"
+    },
+    s4_4: {
+      bg: "bg_rumor", speaker: "水库管理员",
+      text: "水位离警戒线还有1.2米，泄洪闸已按预案预泄。",
+      nextId: "s4_5"
+    },
+    s4_5: {
+      bg: "bg_rumor", speaker: "公安局长",
+      text: "要不要直接删帖、封几个账号？技术上几分钟就能办。",
+      nextId: "s4_5b"
+    },
+    s4_5b: {
+      speaker: "市长",
+      text: "先核实，再发布。给我一份普通市民能看懂的水库数据。",
+      nextId: "s4_6"
+    },
+    s4_6: {
+      bg: "bg_rumor", speaker: "秘书长",
+      text: "可删得越快，信的人可能越多。",
+      nextId: "s4_choice"
+    },
+    s4_choice: {
+      bg: "bg_rumor", speaker: "市长",
+      text: "窗外，抢购的人流已经堵住了主干道。",
+      options: [
+        {
+          text: "删帖控评，封禁谣言账号",
+          tag: "删帖控评",
+          effect: { morale: -15, casualties: 3 },
+          nextId: "r4a"
+        },
+        {
+          text: "直播水库实况，权威辟谣",
+          tag: "权威辟谣",
+          effect: { funds: -5, morale: 12 },
+          nextId: "r4b"
+        }
+      ]
+    },
+    r4a: {
+      bg: "bg_rumor", speaker: "旁白",
+      text: "帖子消失了，截图却在私域疯传。抢购人群发生踩踏，十几人受伤。",
+      tip: {
+        title: "谣言处置的“黄金四小时”",
+        body: "突发事件中，谣言传播往往快于真相。处置要点是“快、准、透”：第一时间核实、第一时间发布，用事实占领舆论场。单纯删堵会造成“塔西佗陷阱”，让公众连真话也不信。恶意造谣可依法追责，但权威信息必须同步跟上。"
+      },
+      nextId: "s5_1"
+    },
+    r4b: {
+      bg: "bg_rumor", speaker: "旁白",
+      text: "镜头里，水库水位清晰可见。直播间在线破千万，抢购潮慢慢退去。",
+      tip: {
+        title: "权威发布为什么有效？",
+        body: "恐慌的本质是信息缺失。直播、数据、现场画面能提供“可验证的确定性”，比喊话更有效。发布时要讲清三件事：发生了什么、我们做了什么、你该怎么做。公开透明与依法治理并不矛盾，追责造谣者与发布真相要同时进行。"
+      },
+      nextId: "s5_1"
+    },
+
+    /* ---------------- 第五幕：致命平静 ---------------- */
+    s5_1: {
+      bg: "bg_eye", time: "0h", scene: "第五幕 · 致命平静", speaker: "旁白",
+      text: "0小时。台风登陆，狂风撕扯城市。忽然，风雨停了。",
+      nextId: "s5_2"
+    },
+    s5_2: {
+      bg: "bg_eye", speaker: "气象局长",
+      text: "这是台风眼，不是结束。半小时后，另一侧眼壁会更猛。",
+      nextId: "s5_3"
+    },
+    s5_3: {
+      bg: "bg_eye", speaker: "应急局长",
+      text: "监控里有人下楼拍照，还有人骑车去看海。",
+      nextId: "s5_3b"
+    },
+    s5_3b: {
+      speaker: "应急局长",
+      text: "社区干部在楼下喊话，可风声太大，很多人听不见。",
+      nextId: "s5_3c"
+    },
+    s5_3c: {
+      speaker: "市长",
+      text: "调无人机沿江堤和沙滩循环喊话，把喇叭挂到最大。",
+      nextId: "s5_4"
+    },
+    s5_4: {
+      bg: "bg_eye", speaker: "市长",
+      text: "广播、短信、警报，我们还有多少时间？",
+      nextId: "s5_5"
+    },
+    s5_5: {
+      bg: "bg_eye", speaker: "气象局长",
+      text: "最多四十分钟。",
+      nextId: "s5_6"
+    },
+    s5_6: {
+      bg: "bg_eye", speaker: "秘书长",
+      text: "拉防空警报可能引发恐慌；不拉，社区喊话根本来不及。",
+      nextId: "s5_choice"
+    },
+    s5_choice: {
+      bg: "bg_eye", speaker: "市长",
+      text: "窗外异常安静，安静得让人害怕。",
+      options: [
+        {
+          text: "顺其自然，等风雨自己提醒",
+          tag: "顺其自然",
+          effect: { casualties: 8, morale: -15 },
+          nextId: "r5a"
+        },
+        {
+          text: "拉响全城警报，循环播报",
+          tag: "拉响警报",
+          effect: { casualties: 1, morale: 4, funds: -5 },
+          nextId: "r5b"
+        }
+      ]
+    },
+    r5a: {
+      bg: "bg_eye", speaker: "旁白",
+      text: "二十分钟后，眼壁回南。街上的人被吹倒、被广告牌砸中，尖叫淹没在风里。",
+      tip: {
+        title: "台风眼陷阱",
+        body: "台风眼是风暴中心的无雨区，直径可达数十公里。眼区过境时风雨骤停，但另一侧眼壁可能更强，风向还会突然反转。历史上大量伤亡发生在“平静期”外出。记住：台风眼不是结束，只是中场休息。警报没解除，人就不能出门。"
+      },
+      nextId: "s6_1"
+    },
+    r5b: {
+      bg: "bg_eye", speaker: "旁白",
+      text: "警报响彻全城，大喇叭反复喊“台风眼不是结束”。有人骂着回家，也有人因此活下来。",
+      tip: {
+        title: "警报要不要拉？",
+        body: "防灾警报的首要目标是“让人离开危险区”，哪怕造成短时恐慌，也比伤亡可控。日本、香港等地在台风眼过境时会强制推送紧急警报。关键是信息具体：说明危险时段、避险场所、解除信号，避免“狼来了”式的空警报。"
+      },
+      nextId: "s6_1"
+    },
+
+    /* ---------------- 终幕：灾后复盘 ---------------- */
+    s6_1: {
+      bg: "bg_disaster", time: "灾后", scene: "终幕 · 灾后复盘", speaker: "旁白",
+      text: "登陆后6小时。风雨停歇，城市满目疮痍，新闻发布会即将开始。",
+      nextId: "s6_2"
+    },
+    s6_2: {
+      bg: "bg_disaster", speaker: "秘书长",
+      text: "记者的问题很尖锐：预警是否及时？伤亡数字是否瞒报？",
+      nextId: "s6_2b"
+    },
+    s6_2b: {
+      speaker: "市长",
+      text: "先让我看完所有数据。今天，我不回避任何问题。",
+      nextId: "s6_3"
+    },
+    s6_3: {
+      bg: "bg_press", speaker: "应急局长",
+      text: "最终统计：伤亡 {casualties} 人，可用资金 {funds}，民心指数 {morale}。",
+      nextId: "s6_4"
+    },
+    s6_4: {
+      bg: "bg_press", speaker: "记者",
+      text: "市长，如果重来一次，您会做出不同选择吗？",
+      nextId: "s6_4b"
+    },
+    s6_4b: {
+      bg: "bg_press", speaker: "记者",
+      text: "还有市民反映，安置点的物资到今天都没发齐。",
+      nextId: "s6_5"
+    },
+    s6_5: {
+      bg: "bg_press", speaker: "市长",
+      text: "所有决定都有代价。但我必须给市民一个交代。",
+      nextId: "s6_choice"
+    },
+    s6_choice: {
+      bg: "bg_press", speaker: "市长",
+      text: "话筒递到面前，全城都在看这场直播。",
+      options: [
+        {
+          text: "承认不足，公布全部数据",
+          tag: "坦诚复盘",
+          effect: { morale: 8 },
+          nextId: "r6a"
+        },
+        {
+          text: "强调成绩，归咎极端天气",
+          tag: "推责天气",
+          effect: { morale: -10 },
+          nextId: "r6b"
+        }
+      ]
+    },
+    r6a: {
+      bg: "bg_press", speaker: "旁白",
+      text: "你鞠躬致歉，逐项公布伤亡、损失与整改清单。弹幕安静了几秒。",
+      tip: {
+        title: "灾后复盘，复的是什么？",
+        body: "复盘不是追责大会，而是把“运气”变成“经验”：预警是否提前、转移是否彻底、物资是否到位、信息是否透明。每一次台风都是对城市韧性的压力测试。把问题清单变成整改清单，下一次才能少流一滴血。"
+      },
+      nextId: "@ending"
+    },
+    r6b: {
+      bg: "bg_press", speaker: "旁白",
+      text: "你把责任推给“百年一遇”。台下记者举手：可预警，三天前就发出了。",
+      tip: {
+        title: "复盘，从说真话开始",
+        body: "把责任推给“百年一遇”，是最省事也最危险的总结。灾害等级可以超预期，但应急准备不能没有上限。公开伤亡与损失，接受质询，才能修复信任。复盘的价值不在解释过去，而在改变下一次。"
+      },
+      nextId: "@ending"
+    }
+  }
+};
+/* GAME_DATA_END */
+
+/* ============================================================
+   二、常量与状态
+   ============================================================ */
+const BG_FALLBACKS = {
+  bg_title: "radial-gradient(circle at 70% 20%, #12324a 0%, #07111d 55%, #03070d 100%)",
+  bg_hq: "radial-gradient(circle at 30% 20%, #0e2a44 0%, #071523 60%, #03080f 100%)",
+  bg_meteorology: "radial-gradient(circle at 70% 30%, #12384a 0%, #071a25 60%, #03090f 100%)",
+  bg_community: "linear-gradient(160deg, #1a2028 0%, #0a1017 60%, #04080d 100%)",
+  bg_pump: "linear-gradient(160deg, #102534 0%, #081520 60%, #03080d 100%)",
+  bg_rumor: "linear-gradient(160deg, #2a1d18 0%, #140e0b 60%, #050303 100%)",
+  bg_eye: "radial-gradient(circle at 50% 40%, #4a5a55 0%, #1c2a2c 45%, #070c0f 100%)",
+  bg_disaster: "linear-gradient(160deg, #1c2328 0%, #0b1116 60%, #04070a 100%)",
+  bg_press: "radial-gradient(circle at 50% 30%, #1b2a3a 0%, #0a1420 60%, #03070c 100%)"
+};
+
+const state = {
+  morale: gameData.initialState.morale,
+  casualties: gameData.initialState.casualties,
+  funds: gameData.initialState.funds,
+  time: gameData.initialState.time
+};
+
+let currentId = null;
+let currentBg = "bg_title";
+let currentPortrait = "";
+let activeLayer = 0;
+let typing = false;
+let typeTimer = null;
+let fullText = "";
+let charIndex = 0;
+let choicesVisible = false;
+let tipOpen = false;
+let pendingNextId = null;
+let gameStarted = false;
+let gameEnded = false;
+
+const decisions = [];
+const tipsSeen = new Set();
+const shownTipNodes = new Set();
+
+/* ============================================================
+   三、DOM 引用
+   ============================================================ */
+const bgLayers = Array.from(document.querySelectorAll(".bg-layer"));
+const portraitImg = document.getElementById("portrait-img");
+const chapterLabel = document.getElementById("chapter-label");
+const toastWrap = document.getElementById("toast-wrap");
+const timeLabel = document.getElementById("time-label");
+const timeValue = document.getElementById("time-value");
+const moraleValue = document.getElementById("morale-value");
+const casualtiesValue = document.getElementById("casualties-value");
+const fundsValue = document.getElementById("funds-value");
+const choicesEl = document.getElementById("choices");
+const dialog = document.getElementById("dialog");
+const speakerEl = document.getElementById("speaker");
+const textEl = document.getElementById("text");
+const continueHint = document.getElementById("continue-hint");
+const uiBottom = document.getElementById("ui-bottom");
+const tipModal = document.getElementById("tip-modal");
+const tipTitle = document.getElementById("tip-title");
+const tipBody = document.getElementById("tip-body");
+const tipClose = document.getElementById("tip-close");
+const titleScreen = document.getElementById("title-screen");
+const startBtn = document.getElementById("start-btn");
+const endingScreen = document.getElementById("ending-screen");
+const endingGrade = document.getElementById("ending-grade");
+const endingTitle = document.getElementById("ending-title");
+const endingDesc = document.getElementById("ending-desc");
+const endingRecap = document.getElementById("ending-recap");
+const endingStats = document.getElementById("ending-stats");
+const endingTips = document.getElementById("ending-tips");
+const restartBtn = document.getElementById("restart-btn");
+
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const SPEAKER_PORTRAITS = {
+  "市长": "char_mayor",
+  "气象局长": "char_meteorologist",
+  "记者": "char_reporter",
+  "水务局长": "char_engineer",
+  "电力局长": "char_engineer",
+  "应急局长": "char_engineer"
+};
+
+/* ============================================================
+   四、工具函数
+   ============================================================ */
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function buildBackground(name) {
+  const fallback = BG_FALLBACKS[name] || "linear-gradient(160deg, #0a1622, #03070d)";
+  return `linear-gradient(180deg, rgba(2, 8, 18, .38), rgba(2, 8, 18, .82)), url("images/${name}.webp"), ${fallback}`;
+}
+
+function setBackground(name) {
+  if (!name || name === currentBg) return;
+  const nextIndex = 1 - activeLayer;
+  const next = bgLayers[nextIndex];
+  const prev = bgLayers[activeLayer];
+
+  next.style.backgroundImage = buildBackground(name);
+  next.style.zIndex = "3";
+  prev.style.zIndex = "2";
+  next.style.opacity = "0";
+
+  // 强制一次重排，保证淡入动画生效
+  void next.offsetWidth;
+  next.style.opacity = "1";
+  prev.style.opacity = "0";
+
+  activeLayer = nextIndex;
+  currentBg = name;
+}
+
+function setChapter(name) {
+  chapterLabel.textContent = name;
+  chapterLabel.classList.toggle("show", Boolean(name));
+}
+
+function formatText(text) {
+  return text.replace(/\{(morale|casualties|funds)\}/g, (_, key) => String(state[key]));
+}
+
+function updatePortrait(speaker) {
+  const name = SPEAKER_PORTRAITS[speaker] || "";
+
+  if (!name) {
+    currentPortrait = "";
+    portraitImg.classList.remove("show");
+    return;
+  }
+
+  if (name === currentPortrait) return;
+
+  currentPortrait = name;
+  portraitImg.src = `images/${name}.webp`;
+  portraitImg.classList.add("show");
+}
+
+function updateSpeaker(name) {
+  const speaker = name || "旁白";
+  speakerEl.textContent = speaker;
+  speakerEl.className = "speaker";
+  if (speaker === "旁白") speakerEl.classList.add("narrator");
+  else if (speaker === "市长") speakerEl.classList.add("mayor");
+
+  updatePortrait(speaker);
+}
+
+function updateHUD() {
+  timeLabel.textContent = /h$/.test(state.time || "") ? "距登陆" : "状态";
+  timeValue.textContent = state.time || "—";
+  moraleValue.textContent = state.morale;
+  casualtiesValue.textContent = state.casualties;
+  fundsValue.textContent = state.funds;
+
+  moraleValue.classList.toggle("warn", state.morale <= 25);
+  moraleValue.classList.toggle("caution", state.morale > 25 && state.morale < 45);
+  casualtiesValue.classList.toggle("warn", state.casualties > 10);
+  casualtiesValue.classList.toggle("caution", state.casualties > 0 && state.casualties <= 10);
+  fundsValue.classList.toggle("warn", state.funds < 20);
+  fundsValue.classList.toggle("caution", state.funds >= 20 && state.funds < 40);
+}
+
+function bumpStat(key) {
+  const card = document.querySelector(`.stat[data-stat="${key}"]`);
+  if (!card) return;
+  card.classList.remove("bump");
+  void card.offsetWidth;
+  card.classList.add("bump");
+  window.setTimeout(() => card.classList.remove("bump"), 420);
+}
+
+function showEffectToasts(effect) {
+  const labels = { morale: "民心", casualties: "伤亡", funds: "资金" };
+  Object.keys(effect || {}).forEach((key) => {
+    const delta = effect[key];
+    if (!delta) return;
+    const negativeOutcome = key === "casualties" ? delta > 0 : delta < 0;
+    const toast = document.createElement("div");
+    toast.className = "toast " + (negativeOutcome ? "bad" : "good");
+    toast.textContent = `${delta > 0 ? "+" : ""}${delta} ${labels[key] || key}`;
+    toastWrap.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 1700);
+  });
+}
+
+function applyEffect(effect) {
+  if (!effect) return;
+
+  Object.keys(effect).forEach((key) => {
+    const delta = effect[key];
+    if (!delta || !(key in state)) return;
+
+    state[key] += delta;
+    if (key === "morale") state.morale = clamp(state.morale, 0, 100);
+    if (key === "casualties") state.casualties = Math.max(0, state.casualties);
+    if (key === "funds") state.funds = clamp(state.funds, 0, 200);
+
+    bumpStat(key);
+  });
+
+  updateHUD();
+  showEffectToasts(effect);
+}
+
+/* ============================================================
+   五、打字机
+   ============================================================ */
+function clearTypeTimer() {
+  if (typeTimer) {
+    window.clearTimeout(typeTimer);
+    typeTimer = null;
+  }
+}
+
+function typeLine(text, node) {
+  clearTypeTimer();
+  fullText = text;
+  charIndex = 0;
+  typing = true;
+  textEl.textContent = "";
+  continueHint.classList.add("hidden");
+  hideChoices();
+
+  if (prefersReducedMotion) {
+    textEl.textContent = fullText;
+    finishTyping();
+    return;
+  }
+
+  typeNext();
+}
+
+function typeNext() {
+  if (!typing) return;
+
+  if (charIndex >= fullText.length) {
+    finishTyping();
+    return;
+  }
+
+  const ch = fullText.charAt(charIndex);
+  charIndex += 1;
+  textEl.textContent += ch;
+
+  let delay = 20 + Math.random() * 14;
+  if ("，、；：".includes(ch)) delay = 110;
+  else if ("。！？…".includes(ch)) delay = 200;
+
+  typeTimer = window.setTimeout(typeNext, delay);
+}
+
+function finishTyping() {
+  typing = false;
+  clearTypeTimer();
+  textEl.textContent = fullText;
+
+  const node = gameData.nodes[currentId];
+
+  if (node && node.options) {
+    renderChoices(node);
+    continueHint.classList.add("hidden");
+    return;
+  }
+
+  continueHint.textContent =
+    node && node.tip && !shownTipNodes.has(currentId) ? "点击查看科普" : "点击继续";
+  continueHint.classList.remove("hidden");
+}
+
+/* ============================================================
+   六、节点渲染与选项
+   ============================================================ */
+function renderNode(id) {
+  const node = gameData.nodes[id];
+  if (!node) {
+    console.error("剧情节点不存在：", id);
+    return;
+  }
+
+  currentId = id;
+
+  if (node.bg) setBackground(node.bg);
+  if (node.scene) setChapter(node.scene);
+  if (node.time) {
+    state.time = node.time;
+    updateHUD();
+  }
+
+  updateSpeaker(node.speaker);
+  typeLine(formatText(node.text), node);
+}
+
+function hideChoices() {
+  choicesVisible = false;
+  choicesEl.classList.add("hidden");
+  choicesEl.innerHTML = "";
+}
+
+function renderChoices(node) {
+  choicesEl.innerHTML = "";
+  choicesVisible = true;
+
+  const label = document.createElement("div");
+  label.className = "choice-label";
+  label.textContent = "关键决策";
+  choicesEl.appendChild(label);
+
+  node.options.forEach((option, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "choice-btn enter";
+    button.style.animationDelay = `${index * 70}ms`;
+
+    const num = document.createElement("span");
+    num.className = "choice-index";
+    num.textContent = String(index + 1).padStart(2, "0");
+
+    const labelText = document.createElement("span");
+    labelText.className = "choice-text";
+    labelText.textContent = option.text;
+
+    button.append(num, labelText);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectOption(option);
+    });
+
+    choicesEl.appendChild(button);
+  });
+
+  choicesEl.classList.remove("hidden");
+  continueHint.classList.add("hidden");
+}
+
+function selectOption(option) {
+  if (!choicesVisible || !option) return;
+  hideChoices();
+
+  applyEffect(option.effect);
+  decisions.push(option.tag || option.text);
+
+  goTo(option.nextId);
+}
+
+/* ============================================================
+   七、推进、科普与结局
+   ============================================================ */
+function advance() {
+  if (!gameStarted || gameEnded || tipOpen) return;
+
+  if (typing) {
+    finishTyping();
+    return;
+  }
+
+  const node = gameData.nodes[currentId];
+  if (!node) return;
+
+  if (node.options) return;
+
+  if (node.tip && !shownTipNodes.has(currentId)) {
+    shownTipNodes.add(currentId);
+    openTip(node.tip, node.nextId);
+    return;
+  }
+
+  if (node.nextId) goTo(node.nextId);
+}
+
+function openTip(tip, nextId) {
+  tipOpen = true;
+  pendingNextId = nextId;
+  tipTitle.textContent = tip.title;
+  tipBody.textContent = tip.body;
+  tipsSeen.add(tip.title);
+  tipModal.classList.remove("hidden");
+  tipClose.focus({ preventScroll: true });
+}
+
+function closeTip() {
+  if (!tipOpen) return;
+  tipOpen = false;
+  tipModal.classList.add("hidden");
+
+  const nextId = pendingNextId;
+  pendingNextId = null;
+  if (nextId) goTo(nextId);
+}
+
+function goTo(id) {
+  if (id === "@ending") {
+    showEnding();
+    return;
+  }
+
+  if (!gameData.nodes[id]) {
+    console.error("跳转节点不存在：", id);
+    return;
+  }
+
+  typing = false;
+  clearTypeTimer();
+  renderNode(id);
+}
+
+function showEnding() {
+  gameEnded = true;
+  typing = false;
+  clearTypeTimer();
+  hideChoices();
+  uiBottom.classList.add("fade-out");
+  updatePortrait("旁白");
+  setBackground("bg_press");
+  state.time = "已登陆";
+  updateHUD();
+
+  const score = Math.round(
+    state.morale * 0.4 +
+    Math.max(0, 100 - state.casualties * 6) * 0.4 +
+    Math.min(100, state.funds) * 0.2
+  );
+
+  let grade;
+  let title;
+  let desc;
+  let gradeClass;
+
+  if (state.casualties <= 5 && state.morale >= 85 && state.funds >= 30) {
+    grade = "S";
+    title = "完美应对";
+    desc = "预警及时，转移彻底，信息透明。你用专业与担当，把一场可能的灾难压到了最低。这座城，欠你一句谢谢。";
+    gradeClass = "grade-s";
+  } else if (state.casualties <= 15 && state.morale >= 40) {
+    grade = "A";
+    title = "惨胜";
+    desc = "城市保住了，但代价沉重。你在安全与民生之间几次失衡，仍有关键环节可以做得更好。";
+    gradeClass = "grade-a";
+  } else {
+    grade = "C";
+    title = "重大失职";
+    desc = "伤亡与民心双双失控。复盘会上，你必须为每一个被忽视的预警负责。";
+    gradeClass = "grade-c";
+  }
+
+  endingGrade.textContent = grade;
+  endingGrade.className = "ending-grade " + gradeClass;
+  endingTitle.textContent = title;
+  endingDesc.textContent = desc;
+
+  endingRecap.innerHTML = "";
+  decisions.forEach((decision, index) => {
+    const chip = document.createElement("span");
+    chip.className = "recap-chip";
+    const num = document.createElement("b");
+    num.textContent = String(index + 1).padStart(2, "0");
+    chip.append(num, document.createTextNode(decision));
+    endingRecap.appendChild(chip);
+  });
+
+  const stats = [
+    ["民心指数", state.morale],
+    ["伤亡人数", state.casualties],
+    ["剩余资金", state.funds],
+    ["综合评分", score]
+  ];
+
+  endingStats.innerHTML = "";
+  stats.forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "end-stat";
+    const labelEl = document.createElement("span");
+    labelEl.textContent = label;
+    const valueEl = document.createElement("strong");
+    valueEl.textContent = value;
+    card.append(labelEl, valueEl);
+    endingStats.appendChild(card);
+  });
+
+  const totalTips = new Set(
+    Object.values(gameData.nodes)
+      .filter((node) => node.tip)
+      .map((node) => node.tip.title)
+  ).size;
+
+  endingTips.textContent = `本次推演解锁防灾知识 ${tipsSeen.size} / ${totalTips} 条`;
+
+  endingScreen.classList.remove("hidden");
+  restartBtn.focus({ preventScroll: true });
+}
+
+/* ============================================================
+   八、开始、重开与移动端横屏
+   ============================================================ */
+async function tryLandscape() {
+  // 只在触屏设备上尝试全屏 + 横屏锁定；失败则用 CSS 竖屏提示兜底
+  if (!window.matchMedia("(pointer: coarse)").matches) return;
+
+  try {
+    if (document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    }
+  } catch (error) {
+    // 浏览器可能拒绝全屏，忽略即可
+  }
+
+  try {
+    if (screen.orientation && typeof screen.orientation.lock === "function") {
+      await screen.orientation.lock("landscape");
+    }
+  } catch (error) {
+    // 不支持方向锁定时由 #rotate-overlay 提示
+  }
+}
+
+function resetState() {
+  state.morale = gameData.initialState.morale;
+  state.casualties = gameData.initialState.casualties;
+  state.funds = gameData.initialState.funds;
+  state.time = gameData.initialState.time;
+
+  decisions.length = 0;
+  tipsSeen.clear();
+  shownTipNodes.clear();
+
+  hideChoices();
+  toastWrap.innerHTML = "";
+  updateHUD();
+}
+
+function startGame() {
+  if (gameStarted) return;
+
+  resetState();
+  gameStarted = true;
+  gameEnded = false;
+  titleScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
+  uiBottom.classList.remove("hidden");
+  uiBottom.classList.remove("fade-out");
+
+  // 不阻塞剧情渲染；移动端若支持则自动进入横屏全屏
+  tryLandscape();
+  renderNode(gameData.startId);
+}
+
+function restartGame() {
+  resetState();
+
+  gameEnded = false;
+  gameStarted = false;
+  currentId = null;
+  pendingNextId = null;
+  tipOpen = false;
+
+  endingScreen.classList.add("hidden");
+  tipModal.classList.add("hidden");
+  uiBottom.classList.add("hidden");
+  uiBottom.classList.remove("fade-out");
+  titleScreen.classList.remove("hidden");
+
+  setBackground("bg_title");
+  setChapter("");
+  updateSpeaker("旁白");
+  textEl.textContent = "";
+  continueHint.classList.add("hidden");
+}
+
+/* ============================================================
+   九、事件绑定与初始化
+   ============================================================ */
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", restartGame);
+tipClose.addEventListener("click", closeTip);
+
+portraitImg.addEventListener("error", () => {
+  portraitImg.classList.remove("show");
+});
+
+dialog.addEventListener("click", advance);
+
+tipModal.addEventListener("click", (event) => {
+  if (event.target === tipModal) closeTip();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (tipOpen) {
+    if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      closeTip();
+    }
+    return;
+  }
+
+  if (!gameStarted || gameEnded) return;
+
+  // 焦点在按钮上时，把回车/空格交给按钮自身的激活行为
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  if (activeTag === "BUTTON" && (event.key === " " || event.key === "Enter")) return;
+
+  if (event.key === " " || event.key === "Enter") {
+    event.preventDefault();
+    advance();
+    return;
+  }
+
+  if (choicesVisible && /^[1-9]$/.test(event.key)) {
+    const node = gameData.nodes[currentId];
+    const option = node && node.options ? node.options[Number(event.key) - 1] : null;
+    if (option) selectOption(option);
+  }
+});
+
+/* 预加载所有背景图；缺失时由渐变兜底 */
+(function preloadBackgrounds() {
+  const names = new Set(["bg_title", "bg_press"]);
+  Object.values(gameData.nodes).forEach((node) => {
+    if (node.bg) names.add(node.bg);
+  });
+
+  names.forEach((name) => {
+    const image = new Image();
+    image.src = `images/${name}.webp`;
+  });
+
+  ["char_mayor", "char_meteorologist", "char_engineer", "char_reporter"].forEach((name) => {
+    const image = new Image();
+    image.src = `images/${name}.webp`;
+  });
+})();
+
+/* 初始化标题页 */
+bgLayers[0].style.backgroundImage = buildBackground("bg_title");
+bgLayers[0].style.opacity = "1";
+bgLayers[0].style.zIndex = "1";
+activeLayer = 0;
+currentBg = "bg_title";
+updateHUD();
+</script>
+</body>
+</html>
