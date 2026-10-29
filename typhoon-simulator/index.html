@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -191,6 +191,7 @@
   }
 
   .stat {
+    position: relative;
     min-width: clamp(52px, 5.2cqw, 88px);
     padding: clamp(5px, .8cqh, 10px) clamp(7px, .8cqw, 14px);
     display: flex;
@@ -198,9 +199,33 @@
     gap: 2px;
     background: rgba(4, 11, 20, .62);
     border: 1px solid rgba(120, 200, 220, .18);
-    border-radius: 8px;
+    border-radius: 0;
     backdrop-filter: blur(8px);
     transition: border-color .3s, box-shadow .3s;
+  }
+
+  .stat::before,
+  .stat::after {
+    content: "";
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border: 1px solid rgba(120, 200, 220, .55);
+    pointer-events: none;
+  }
+
+  .stat::before {
+    top: -1px;
+    left: -1px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .stat::after {
+    right: -1px;
+    bottom: -1px;
+    border-top: 0;
+    border-left: 0;
   }
 
   .stat-label {
@@ -275,7 +300,7 @@
     font-size: clamp(10px, .7cqw, 12px);
     letter-spacing: .08em;
     padding: 4px 9px;
-    border-radius: 4px;
+    border-radius: 0;
     background: rgba(4, 11, 20, .86);
     border: 1px solid rgba(255, 255, 255, .12);
     color: #dbe9f3;
@@ -337,7 +362,7 @@
     padding: clamp(9px, 1.35cqh, 15px) clamp(11px, 1.1cqw, 18px);
     background: rgba(4, 11, 20, .55);
     border: 1px solid rgba(255, 255, 255, .18);
-    border-radius: 8px;
+    border-radius: 0;
     color: #dfeaf3;
     cursor: pointer;
     backdrop-filter: blur(10px);
@@ -375,7 +400,7 @@
     font-size: clamp(9px, .62cqw, 11px);
     color: #5eead4;
     border: 1px solid rgba(94, 234, 212, .4);
-    border-radius: 3px;
+    border-radius: 0;
     padding: 1px 4px;
     letter-spacing: .05em;
   }
@@ -403,10 +428,23 @@
     padding: clamp(13px, 2.2cqh, 26px) clamp(14px, 1.5cqw, 30px) clamp(20px, 2.8cqh, 30px);
     background: linear-gradient(145deg, rgba(10, 24, 36, .9), rgba(3, 9, 17, .87));
     border: 1px solid rgba(120, 200, 220, .2);
-    border-radius: 12px;
+    border-radius: 0;
     box-shadow: 0 16px 50px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
     backdrop-filter: blur(14px);
     cursor: pointer;
+  }
+
+  #dialog::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(94, 234, 212, .55);
+    border-right: 0;
+    border-bottom: 0;
+    pointer-events: none;
   }
 
   #dialog::after {
@@ -428,7 +466,7 @@
     background: #0a1a26;
     border: 1px solid rgba(94, 234, 212, .35);
     border-bottom: none;
-    border-radius: 6px 6px 0 0;
+    border-radius: 0;
     font-size: clamp(10px, .78cqw, 14px);
     letter-spacing: .16em;
     color: #7ff3df;
@@ -477,6 +515,7 @@
   }
 
   .tip-card {
+    position: relative;
     width: min(620px, 92%);
     max-height: 86cqh;
     overflow-y: auto;
@@ -484,9 +523,47 @@
     background: linear-gradient(165deg, #0c1d2a, #050d16);
     border: 1px solid rgba(251, 191, 36, .35);
     border-top: 3px solid #fbbf24;
-    border-radius: 12px;
+    border-radius: 0;
     box-shadow: 0 24px 80px rgba(0, 0, 0, .65);
     animation: modalIn .35s cubic-bezier(.2, .9, .3, 1) both;
+  }
+
+  .tip-card::before,
+  .tip-card::after {
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border: 1px solid rgba(251, 191, 36, .7);
+    pointer-events: none;
+  }
+
+  .tip-card::before {
+    top: -1px;
+    left: -1px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .tip-card::after {
+    right: -1px;
+    bottom: -1px;
+    border-top: 0;
+    border-left: 0;
+  }
+
+  .tip-card,
+  .ending-card {
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tip-card::-webkit-scrollbar,
+  .ending-card::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   @keyframes modalIn {
@@ -523,7 +600,7 @@
     padding: clamp(10px, 1.3cqh, 14px);
     background: rgba(251, 191, 36, .12);
     border: 1px solid rgba(251, 191, 36, .6);
-    border-radius: 7px;
+    border-radius: 0;
     color: #ffd77a;
     font-size: clamp(12px, .9cqw, 14px);
     letter-spacing: .2em;
@@ -645,7 +722,7 @@
     padding: clamp(11px, 1.5cqh, 16px) clamp(22px, 2.2cqw, 34px);
     background: rgba(94, 234, 212, .1);
     border: 1px solid rgba(94, 234, 212, .8);
-    border-radius: 6px;
+    border-radius: 0;
     color: #c9fff6;
     font-size: clamp(12px, .95cqw, 15px);
     letter-spacing: .26em;
@@ -686,16 +763,41 @@
   }
 
   .ending-card {
+    position: relative;
     width: min(820px, 96%);
     max-height: 92cqh;
     overflow-y: auto;
     padding: clamp(20px, 3.2cqw, 44px);
     background: linear-gradient(165deg, rgba(10, 25, 38, .97), rgba(3, 9, 17, .98));
     border: 1px solid rgba(94, 234, 212, .22);
-    border-radius: 16px;
+    border-radius: 0;
     text-align: center;
     box-shadow: 0 30px 100px rgba(0, 0, 0, .7);
     animation: modalIn .45s ease both;
+  }
+
+  .ending-card::before,
+  .ending-card::after {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(94, 234, 212, .55);
+    pointer-events: none;
+  }
+
+  .ending-card::before {
+    top: -1px;
+    left: -1px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .ending-card::after {
+    right: -1px;
+    bottom: -1px;
+    border-top: 0;
+    border-left: 0;
   }
 
   .ending-kicker {
@@ -748,7 +850,7 @@
   .recap-chip {
     padding: 4px 8px;
     border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 4px;
+    border-radius: 0;
     background: rgba(255, 255, 255, .04);
     font-size: clamp(9px, .68cqw, 11px);
     letter-spacing: .04em;
@@ -768,7 +870,7 @@
     padding: clamp(8px, 1.2cqh, 12px) 6px;
     background: rgba(255, 255, 255, .035);
     border: 1px solid rgba(255, 255, 255, .08);
-    border-radius: 8px;
+    border-radius: 0;
   }
 
   .end-stat span {
@@ -796,7 +898,7 @@
     padding: clamp(10px, 1.3cqh, 14px) clamp(24px, 2.4cqw, 38px);
     background: rgba(251, 191, 36, .1);
     border: 1px solid rgba(251, 191, 36, .65);
-    border-radius: 6px;
+    border-radius: 0;
     color: #ffd77a;
     font-size: clamp(12px, .9cqw, 14px);
     letter-spacing: .22em;
@@ -886,15 +988,40 @@
   }
 
   .fs-prompt-card {
+    position: relative;
     width: min(360px, 100%);
     padding: 26px 22px;
     background: linear-gradient(165deg, #0c1d2a, #050d16);
     border: 1px solid rgba(94, 234, 212, .32);
     border-top: 3px solid #5eead4;
-    border-radius: 14px;
+    border-radius: 0;
     box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
     text-align: center;
     animation: modalIn .35s cubic-bezier(.2, .9, .3, 1) both;
+  }
+
+  .fs-prompt-card::before,
+  .fs-prompt-card::after {
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border: 1px solid rgba(94, 234, 212, .7);
+    pointer-events: none;
+  }
+
+  .fs-prompt-card::before {
+    top: -1px;
+    left: -1px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .fs-prompt-card::after {
+    right: -1px;
+    bottom: -1px;
+    border-top: 0;
+    border-left: 0;
   }
 
   .fs-prompt-kicker {
@@ -928,7 +1055,7 @@
   #fs-skip {
     width: 100%;
     padding: 12px 14px;
-    border-radius: 7px;
+    border-radius: 0;
     font-size: 14px;
     letter-spacing: .12em;
     cursor: pointer;
@@ -2406,3 +2533,4 @@ updateHUD();
 </script>
 </body>
 </html>
+
