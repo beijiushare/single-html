@@ -847,6 +847,92 @@
   }
 
   /* ==========================================================
+     移动端全屏提示
+     ========================================================== */
+  #fs-prompt {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(1, 5, 10, .82);
+    backdrop-filter: blur(10px);
+  }
+
+  .fs-prompt-card {
+    width: min(360px, 100%);
+    padding: 26px 22px;
+    background: linear-gradient(165deg, #0c1d2a, #050d16);
+    border: 1px solid rgba(94, 234, 212, .32);
+    border-top: 3px solid #5eead4;
+    border-radius: 14px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
+    text-align: center;
+    animation: modalIn .35s cubic-bezier(.2, .9, .3, 1) both;
+  }
+
+  .fs-prompt-kicker {
+    margin-bottom: 10px;
+    font-size: 10px;
+    letter-spacing: .28em;
+    color: #5eead4;
+  }
+
+  .fs-prompt-card h2 {
+    margin-bottom: 10px;
+    font-size: 22px;
+    line-height: 1.3;
+    color: #f8fbfd;
+  }
+
+  .fs-prompt-card p {
+    font-size: 13px;
+    line-height: 1.8;
+    color: #a9bfcf;
+  }
+
+  .fs-prompt-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  #fs-enter,
+  #fs-skip {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 7px;
+    font-size: 14px;
+    letter-spacing: .12em;
+    cursor: pointer;
+  }
+
+  #fs-enter {
+    background: #5eead4;
+    border: 1px solid #5eead4;
+    color: #041014;
+    font-weight: 700;
+  }
+
+  #fs-enter:hover { background: #8ff7e7; }
+  #fs-enter:disabled { opacity: .65; cursor: wait; }
+
+  #fs-skip {
+    background: transparent;
+    border: 1px solid rgba(159, 180, 195, .25);
+    color: #9fb4c3;
+  }
+
+  #fs-skip:hover { border-color: rgba(159, 180, 195, .5); color: #d7e6ef; }
+
+  #fs-enter:focus,
+  #fs-skip:focus { outline: none; }
+  #fs-enter:focus-visible,
+  #fs-skip:focus-visible { box-shadow: 0 0 0 2px rgba(94, 234, 212, .35); }
+
+  /* ==========================================================
      短屏 / 小舞台适配：仍保持 16:9，只压缩留白
      ========================================================== */
   @container stage (max-width: 900px) {
@@ -901,6 +987,19 @@
     <div class="rotate-phone"></div>
     <h2>请横屏游玩</h2>
     <p>将手机旋转为横向，获得完整的 16:9 指挥中心视野。<br>若屏幕被锁定，请先关闭系统的竖屏锁定。</p>
+  </div>
+</div>
+
+<!-- 移动端全屏提示：仅在手机/触屏设备上出现 -->
+<div id="fs-prompt" class="hidden" role="dialog" aria-modal="true" aria-labelledby="fs-prompt-title">
+  <div class="fs-prompt-card">
+    <div class="fs-prompt-kicker">移动端体验</div>
+    <h2 id="fs-prompt-title">建议全屏进入</h2>
+    <p>全屏后可隐藏浏览器栏，获得完整的 16:9 指挥中心视野。</p>
+    <div class="fs-prompt-actions">
+      <button id="fs-enter" type="button">最大化进入</button>
+      <button id="fs-skip" type="button">直接进入</button>
+    </div>
   </div>
 </div>
 
@@ -1026,508 +1125,547 @@
 
 /* GAME_DATA_START */
 const gameData = {
-  startId: "s0_1",
-  initialState: { morale: 60, casualties: 0, funds: 100, time: "72h" },
-  nodes: {
-
-    /* ---------------- 序章 ---------------- */
-    s0_1: {
-      bg: "bg_hq", time: "72h", scene: "序章 · 风暴将至", speaker: "旁白",
-      text: "9月12日，第14号台风“海燕”生成。路径直指滨江。",
-      nextId: "s0_2"
+  "startId": "s0_1",
+  "initialState": {
+    "morale": 65,
+    "casualties": 0,
+    "funds": 100,
+    "time": "72h"
+  },
+  "nodes": {
+    "s0_1": {
+      "bg": "bg_hq",
+      "time": "72h",
+      "speaker": "情况",
+      "text": "9月12日，第14号台风“海燕”生成，路径直指滨江。市防指启动联合会商，气象、水利、应急、电力、通信等部门进入联合值守。",
+      "scene": "序章 · 风暴将至",
+      "nextId": "s0_2"
     },
-    s0_2: {
-      bg: "bg_hq", speaker: "秘书长",
-      text: "市长，气象局刚送来的会商结果。三天后，正面登陆。",
-      nextId: "s0_3"
+    "s0_2": {
+      "bg": "bg_hq",
+      "speaker": "秘书长",
+      "text": "市长，气象局刚送来的会商结果。三天后，台风将正面登陆。",
+      "nextId": "s0_3"
     },
-    s0_3: {
-      bg: "bg_hq", speaker: "气象局长",
-      text: "不是擦边。最强十七级，滨江有气象记录以来，没见过。",
-      nextId: "s0_3b"
+    "s0_3": {
+      "bg": "bg_hq",
+      "speaker": "气象局长",
+      "text": "十七级台风，云系直径就有一千多公里。这是滨江有气象记录以来最高危险等级的台风，任务重大啊。",
+      "nextId": "s0_3b"
     },
-    s0_3b: {
-      speaker: "气象局长",
-      text: "云系直径一千多公里，登陆正赶上天文大潮。风、雨、潮，撞在一块。",
-      nextId: "s0_3c"
+    "s0_3b": {
+      "speaker": "气象局长",
+      "text": "登陆又赶上天文大潮，风、雨、潮三碰头，形势十分严峻，必须按最坏情况准备。",
+      "nextId": "s0_3c"
     },
-    s0_3c: {
-      speaker: "市长",
-      text: "通知各区县一把手，一小时后开防台紧急会议。谁不到，让他直接跟我说。",
-      nextId: "s0_4"
+    "s0_3c": {
+      "speaker": "市长",
+      "text": "通知各区县，一小时后开防台紧急会！",
+      "nextId": "s0_4"
     },
-    s0_4: {
-      bg: "bg_hq", speaker: "市长",
-      text: "数据全部上大屏。不要念材料，我要听最坏的那一版。",
-      nextId: "s0_5"
+    "s0_4": {
+      "bg": "bg_hq",
+      "speaker": "市长",
+      "text": "同志们，要做好最坏的打算！",
+      "nextId": "s0_5"
     },
-    s0_5: {
-      bg: "bg_hq", speaker: "旁白",
-      text: "红色按钮按下去，值班室的电话一个接一个响起来。",
-      nextId: "s1_1"
+    "s0_5": {
+      "bg": "bg_hq",
+      "speaker": "旁白",
+      "text": "随着红色按钮按下，值班室的电话一个接一个响了起来。",
+      "nextId": "s1_1"
     },
-
-    /* ---------------- 第一幕：预警与部署 ---------------- */
-    s1_1: {
-      bg: "bg_meteorology", time: "48h", scene: "第一幕 · 预警与部署", speaker: "旁白",
-      text: "距登陆48小时。橙色预警，Ⅱ级响应。防汛指挥部的灯，一夜没关。",
-      nextId: "s1_2"
+    "s1_1": {
+      "bg": "bg_meteorology",
+      "time": "48h",
+      "speaker": "旁白",
+      "text": "距登陆48小时。橙色预警，Ⅱ级响应。防汛指挥部的灯彻夜未关。",
+      "scene": "第一幕 · 预警与部署",
+      "nextId": "s1_2"
     },
-    s1_2: {
-      bg: "bg_meteorology", speaker: "气象局长",
-      text: "登陆风力十六级，过程雨量四百毫米。风暴潮叠上天文大潮，沿海按最坏情况准备。",
-      nextId: "s1_3"
+    "s1_2": {
+      "bg": "bg_meteorology",
+      "speaker": "气象局长",
+      "text": "登陆风力十六级，过程雨量四百毫米。风暴潮再叠上天文大潮，沿海必须按最坏情况准备，不能有半点侥幸。",
+      "nextId": "s1_3"
     },
-    s1_3: {
-      bg: "bg_meteorology", speaker: "应急局长",
-      text: "沿海三个区要转十二万人。安置点现在只够一半，剩下的还在找。",
-      nextId: "s1_3b"
+    "s1_3": {
+      "bg": "bg_meteorology",
+      "speaker": "应急局长",
+      "text": "沿海三个区，足足十二万人要转。安置点又不够用，现在还有一半的群众没有得到妥善的安置。",
+      "nextId": "s1_3b"
     },
-    s1_3b: {
-      speaker: "民政局长",
-      text: "折叠床、饮用水都缺。走正常采购，最快六个小时。",
-      nextId: "s1_3c"
+    "s1_3b": {
+      "speaker": "民政局长",
+      "text": "台风不等人啊！折叠床、饮用水……现在是都缺，如果正常采购的话，最快也要六个小时。",
+      "nextId": "s1_3c"
     },
-    s1_3c: {
-      speaker: "市长",
-      text: "走应急采购。先拨钱，后补手续。今晚十二点之前，我要看到物资进场。",
-      nextId: "s1_4"
+    "s1_3c": {
+      "speaker": "市长",
+      "text": "现在是紧急情况，先采购，后备案！今晚十二点前，不管你用什么办法，物资必须到位。",
+      "nextId": "s1_4"
     },
-    s1_4: {
-      bg: "bg_meteorology", speaker: "秘书长",
-      text: "现在启动五停，一天损失七个亿。几家企业的电话，已经打到我这里了。",
-      nextId: "s1_5"
+    "s1_4": {
+      "bg": "bg_meteorology",
+      "speaker": "秘书长",
+      "text": "现在启动五停，一天就是十个亿的损失啊。",
+      "nextId": "s1_5"
     },
-    s1_5: {
-      bg: "bg_meteorology", speaker: "市长",
-      text: "先别算钱。你告诉我，什么都不做，最坏死多少人？",
-      nextId: "s1_6"
+    "s1_5": {
+      "bg": "bg_meteorology",
+      "speaker": "市长",
+      "text": "现在是计较这些钱的时候吗？人民群众的生命才是第一位要保障的！按最坏的情况来算，你们预估可能有多少人死亡？",
+      "nextId": "s1_6"
     },
-    s1_6: {
-      bg: "bg_meteorology", speaker: "气象局长",
-      text: "模型给的是三百到八百。提前四十八小时五停，能压到个位数。可路径还有变数。",
-      nextId: "s1_choice"
+    "s1_6": {
+      "bg": "bg_meteorology",
+      "speaker": "气象局长",
+      "text": "按最坏情况测算，三百到八百人。若提前四十八小时启动五停，能压到个位数。但路径还有变数，绝不能掉以轻心。",
+      "nextId": "s1_choice"
     },
-    s1_choice: {
-      bg: "bg_meteorology", speaker: "市长",
-      text: "这个字，我来签。你们把方案说清楚。",
-      options: [
+    "s1_choice": {
+      "bg": "bg_meteorology",
+      "speaker": "市长",
+      "text": "我来签字。",
+      "options": [
         {
-          text: "现在就启动全市“五停”",
-          tag: "立即五停",
-          effect: { morale: 10, funds: -25 },
-          nextId: "r1a"
+          "text": "现在就启动全市“五停”",
+          "tag": "立即五停",
+          "effect": {
+            "morale": 10,
+            "funds": -25
+          },
+          "nextId": "r1a"
         },
         {
-          text: "再等半天，看路径会不会偏",
-          tag: "观望半天",
-          effect: { morale: -5, casualties: 3 },
-          nextId: "r1b"
+          "text": "再等半天，看路径会不会偏",
+          "tag": "观望半天",
+          "effect": {
+            "morale": -5,
+            "casualties": 3
+          },
+          "nextId": "r1b"
         }
       ]
     },
-    r1a: {
-      bg: "bg_meteorology", speaker: "旁白",
-      text: "命令连夜下去。学校停课，工地停工，航班取消。第二天早上，街上空得反常。",
-      tip: {
-        title: "什么是“五停”？",
-        body: "五停，指停工、停课、停业、停产、停运。台风红色预警生效后，属地政府可依法启动。提前量比强度更重要：转移、加固、备勤都需要时间。防灾界有句话——“宁可十防九空，不可失防万一”。停一天的经济损失可以补回来，逝去的生命不能。"
+    "r1a": {
+      "bg": "bg_meteorology",
+      "speaker": "旁白",
+      "text": "命令连夜下达。很快，学校停课、工地停工、航班取消。第二天早上，街上空荡荡的。",
+      "tip": {
+        "title": "什么是“五停”？",
+        "body": "五停，指停工、停课、停业、停产、停运。台风红色预警生效后，属地政府可依法启动。提前量比强度更重要：转移、加固、备勤都需要时间。防灾界有句话——“宁可十防九空，不可失防万一”。停一天的经济损失可以补回来，逝去的生命不能。"
       },
-      nextId: "s2_1"
+      "nextId": "s2_1"
     },
-    r1b: {
-      bg: "bg_meteorology", speaker: "旁白",
-      text: "半天过去，路径锁定，五停才姗姗下达。晚高峰的雨里，多少人堵在路上，没人说得清。",
-      tip: {
-        title: "预警提前量，值多少钱？",
-        body: "台风路径有不确定性，但“再等等”往往是把风险转嫁给市民。研究显示，提前24小时发布停工停课令，可显著减少户外伤亡。红色预警不是参考消息，而是行动指令。犹豫的成本，通常由最脆弱的人承担。"
+    "r1b": {
+      "bg": "bg_meteorology",
+      "speaker": "旁白",
+      "text": "半天过去，台风的路径终于锁定了。",
+      "tip": {
+        "title": "预警提前量，值多少钱？",
+        "body": "台风路径有不确定性，但“再等等”往往是把风险转嫁给市民。研究显示，提前24小时发布停工停课令，可显著减少户外伤亡。红色预警不是参考消息，而是行动指令。犹豫的成本，通常由最脆弱的人承担。"
       },
-      nextId: "s2_1"
+      "nextId": "s2_1"
     },
-
-    /* ---------------- 第二幕：基层冲突 ---------------- */
-    s2_1: {
-      bg: "bg_community", time: "24h", scene: "第二幕 · 基层冲突", speaker: "旁白",
-      text: "距登陆24小时。雨一阵紧一阵，城郊红砖老楼里，还有两百多户没走。",
-      nextId: "s2_2"
+    "s2_1": {
+      "bg": "bg_community",
+      "time": "24h",
+      "speaker": "旁白",
+      "text": "距登陆24小时。雨下一阵停一阵，在城郊红砖老楼里，还有两百多户老居民不肯走。",
+      "scene": "第二幕 · 基层冲突",
+      "nextId": "s2_2"
     },
-    s2_2: {
-      bg: "bg_community", speaker: "区干部",
-      text: "王大爷把门反锁了，说住了四十年，没见过房子塌。谁劝都不开。",
-      nextId: "s2_3"
+    "s2_2": {
+      "bg": "bg_community",
+      "speaker": "区干部",
+      "text": "王大爷把门都反锁了，说住了四十年，没见过房子塌。我们反复劝，他就是不开门。",
+      "nextId": "s2_3"
     },
-    s2_3: {
-      bg: "bg_community", speaker: "市长",
-      text: "哪年的楼？危房鉴定做了没有？",
-      nextId: "s2_4"
+    "s2_3": {
+      "bg": "bg_community",
+      "speaker": "市长",
+      "text": "是哪一年的楼？做过危房鉴定吗？",
+      "nextId": "s2_4"
     },
-    s2_4: {
-      bg: "bg_community", speaker: "应急局长",
-      text: "八五年的预制板楼，C级。水再涨一米，一楼就没了。",
-      nextId: "s2_5"
+    "s2_4": {
+      "bg": "bg_community",
+      "speaker": "应急局长",
+      "text": "八五年的预制板楼，C级，抗洪能力很堪忧啊。水要是再涨一米，一楼就保不住了。",
+      "nextId": "s2_5"
     },
-    s2_5: {
-      bg: "bg_community", speaker: "区干部",
-      text: "老人有心脏病，硬抬怕出事。他儿子的电话，一直打不通。",
-      nextId: "s2_5b"
+    "s2_5": {
+      "bg": "bg_community",
+      "speaker": "区干部",
+      "text": "老人还有心脏病，如果强行转移怕出意外。他儿子的电话也一直打不通。",
+      "nextId": "s2_5b"
     },
-    s2_5b: {
-      speaker: "区干部",
-      text: "他在屋里喊，死也死在自己家，哪儿也不去。",
-      nextId: "s2_5c"
+    "s2_5b": {
+      "speaker": "区干部",
+      "text": "老人在屋里喊，死也要死在自己家，哪儿也不去。",
+      "nextId": "s2_5c"
     },
-    s2_5c: {
-      speaker: "市长",
-      text: "把鉴定报告念给他听，撤离路线也念。先让他把门打开。",
-      nextId: "s2_6"
+    "s2_5c": {
+      "speaker": "市长",
+      "text": "不管是软磨硬泡，必须转移。",
+      "nextId": "s2_6"
     },
-    s2_6: {
-      bg: "bg_community", speaker: "市长",
-      text: "强制转移的手续，走了没有？真到那一步，谁负责抬人？",
-      nextId: "s2_choice"
+    "s2_6": {
+      "bg": "bg_community",
+      "speaker": "市长",
+      "text": "现在雨越下越大了。",
+      "nextId": "s2_choice"
     },
-    s2_choice: {
-      bg: "bg_community", speaker: "市长",
-      text: "楼里还剩十七户。雨再大，车就进不去了。",
-      options: [
+    "s2_choice": {
+      "bg": "bg_community",
+      "speaker": "市长",
+      "text": "楼里还剩十七户。雨再下大些，车进不去，人也出不来了，我们必须当机立断。",
+      "options": [
         {
-          text: "依法强制带离，全程录像",
-          tag: "强制转移",
-          effect: { morale: -12, funds: -5 },
-          nextId: "r2a"
+          "text": "依法强制带离，全程录像",
+          "tag": "强制转移",
+          "effect": {
+            "morale": -12,
+            "funds": -5
+          },
+          "nextId": "r2a"
         },
         {
-          text: "继续劝，干部留下陪着",
-          tag: "柔性劝导",
-          effect: { morale: 6, casualties: 4 },
-          nextId: "r2b"
+          "text": "继续劝，干部留下陪着",
+          "tag": "柔性劝导",
+          "effect": {
+            "morale": 6,
+            "casualties": 4
+          },
+          "nextId": "r2b"
         }
       ]
     },
-    r2a: {
-      bg: "bg_community", speaker: "旁白",
-      text: "执法人员背起老人下楼。骂声一路跟到雨里。最后一户撤出来时，水已经漫过门槛。",
-      tip: {
-        title: "为什么要“应转尽转”？",
-        body: "《防洪法》《突发事件应对法》规定，受洪水威胁人员必须服从转移命令；拒不转移的，可依法强制带离。C级危房在持续暴雨和风暴潮下极易倒塌，老旧小区又多为老人、病人。基层常说：宁可听骂声，不要听哭声。"
+    "r2a": {
+      "bg": "bg_community",
+      "speaker": "旁白",
+      "text": "执法人员背起老人下楼。最后一户撤出来时，水已经漫过门槛。",
+      "tip": {
+        "title": "为什么要“应转尽转”？",
+        "body": "《防洪法》《突发事件应对法》规定，受洪水威胁人员必须服从转移命令；拒不转移的，可依法强制带离。C级危房在持续暴雨和风暴潮下极易倒塌，老旧小区又多为老人、病人。基层常说：宁可听骂声，不要听哭声。"
       },
-      nextId: "s3_1"
+      "nextId": "k1_1"
     },
-    r2b: {
-      bg: "bg_community", speaker: "旁白",
-      text: "干部陪着老人守到后半夜。水位突然涨上来，冲锋舟砸开窗户，两名干部受了伤。",
-      tip: {
-        title: "柔性劝导的边界",
-        body: "柔性劝导能减少对抗，但必须设“止损点”：水位、雨量或时间一到，立即转为强制转移。此次虽救出老人，却让救援人员暴露在风险中。基层处置要“情理法”结合，但安全底线不能讨价还价。"
+    "r2b": {
+      "bg": "bg_community",
+      "speaker": "旁白",
+      "text": "干部陪着老人守到后半夜。水位突然上涨，冲锋舟砸开窗户成功救出受困人员。两名干部受伤。",
+      "tip": {
+        "title": "柔性劝导的边界",
+        "body": "柔性劝导能减少对抗，但必须设“止损点”：水位、雨量或时间一到，立即转为强制转移。此次虽救出老人，却让救援人员暴露在风险中。基层处置要“情理法”结合，但安全底线不能讨价还价。"
       },
-      nextId: "s3_1"
+      "nextId": "k1_1"
     },
-
-    /* ---------------- 第三幕：资源枯竭 ---------------- */
-    s3_1: {
-      bg: "bg_pump", time: "12h", scene: "第三幕 · 资源枯竭", speaker: "旁白",
-      text: "距登陆12小时。暴雨红色预警。泵站满负荷，电网开始跳闸。",
-      nextId: "s3_2"
-    },
-    s3_2: {
-      bg: "bg_pump", speaker: "水务局长",
-      text: "三号泵站断电了。备用电源最多撑四十分钟。",
-      nextId: "s3_2b"
-    },
-    s3_2b: {
-      speaker: "电力局长",
-      text: "发电车已经派出去，可前面积水太深，车进不去。",
-      nextId: "s3_3"
-    },
-    s3_3: {
-      bg: "bg_pump", speaker: "市长",
-      text: "两个片区都告急。水往哪边排，你们拿个意见。",
-      nextId: "s3_4"
-    },
-    s3_4: {
-      bg: "bg_pump", speaker: "水务局长",
-      text: "商业区是地铁、医院、地下车库；老城区是八万低洼住户。泵就这么多，只能保一头。",
-      nextId: "s3_5"
-    },
-    s3_5: {
-      bg: "bg_pump", speaker: "秘书长",
-      text: "商业区有地铁和两所三甲，老城区是老旧小区。两边都得罪不起。",
-      nextId: "s3_5b"
-    },
-    s3_5b: {
-      speaker: "水务局长",
-      text: "移动泵车只剩六台。两边各要十台，怎么分都不够。",
-      nextId: "s3_6"
-    },
-    s3_6: {
-      bg: "bg_pump", speaker: "市长",
-      text: "把积水图调出来。哪个片区先淹到人，就先保哪个。",
-      nextId: "s3_choice"
-    },
-    s3_choice: {
-      bg: "bg_pump", speaker: "市长",
-      text: "开闸之前，把最坏的结果再说一遍。",
-      options: [
+    "k1_1": {
+      "bg": "bg_community",
+      "time": "12h",
+      "scene": "第三幕 · 居家防风",
+      "speaker": "旁白",
+      "text": "要安全度过台风，市民必须对台风和防台风有更深的了解。台风来临前，先检查门窗和阳台。",
+      "options": [
         {
-          text: "优先保商业区与三甲医院",
-          tag: "保商业区",
-          effect: { funds: 10, morale: -10, casualties: 6 },
-          nextId: "r3a"
+          "text": "关紧门窗，远离窗户和阳台",
+          "tag": "关门窗",
+          "effect": {
+            "morale": 3
+          },
+          "nextId": "k1_ok"
         },
         {
-          text: "优先保老城区低洼住户",
-          tag: "保老城区",
-          effect: { funds: -15, morale: 10, casualties: 2 },
-          nextId: "r3b"
+          "text": "凑到窗边看风雨、拍视频",
+          "tag": "窗边拍视频",
+          "effect": {
+            "morale": -3,
+            "casualties": 1
+          },
+          "nextId": "k1_bad"
         }
       ]
     },
-    r3a: {
-      bg: "bg_pump", speaker: "旁白",
-      text: "商业区保住了，地铁和医院照常运转。老城区的积水漫过床沿，热线被打爆。",
-      tip: {
-        title: "城市排水的优先级",
-        body: "防汛调度遵循“生命线工程优先”：医院、供水、供电、通信、交通枢纽必须优先保障。但“保资产”与“保人命”并非二选一，可动用调蓄池、移动泵车、分区错峰抽排。老城区管网标准低，是内涝中最脆弱的一环。"
+    "k1_ok": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：门窗关严，阳台杂物已收进屋内。人待在远离窗户的内侧房间，玻璃破碎时也没有受伤。",
+      "tip": {
+        "title": "居家防风：关门窗、远离窗边",
+        "body": "台风期间不要靠近窗户、阳台和玻璃幕墙。强风可能吹碎玻璃，飞来的广告牌、花盆、树枝也会伤人。提前收好阳台杂物，给玻璃贴防爆膜，人待在远离窗户的内侧房间。"
       },
-      nextId: "s4_1"
+      "nextId": "k2_1"
     },
-    r3b: {
-      bg: "bg_pump", speaker: "旁白",
-      text: "老城区的水位压住了，八万人没泡在水里。商业区地下车库进了水，三百多辆车泡汤。",
-      tip: {
-        title: "海绵城市与调蓄",
-        body: "单靠泵站抽排，遇到超标准暴雨必然捉襟见肘。海绵城市通过透水铺装、下沉绿地、调蓄池，实现“渗、滞、蓄、净、用、排”。老城区改造难，可先布移动泵车和临时挡水板。调度要算清“水账”：先保人命，再保资产。"
+    "k1_bad": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：玻璃被风拍碎，飞来的杂物划伤手臂；窗边拍视频的人被碎玻璃割伤，需要送医。",
+      "tip": {
+        "title": "居家防风：关门窗、远离窗边",
+        "body": "台风期间不要靠近窗户、阳台和玻璃幕墙。强风可能吹碎玻璃，飞来的广告牌、花盆、树枝也会伤人。提前收好阳台杂物，给玻璃贴防爆膜，人待在远离窗户的内侧房间。"
       },
-      nextId: "s4_1"
+      "nextId": "k2_1"
     },
-
-    /* ---------------- 第四幕：信息恐慌 ---------------- */
-    s4_1: {
-      bg: "bg_rumor", time: "4h", scene: "第四幕 · 信息恐慌", speaker: "旁白",
-      text: "距登陆4小时。“青龙水库决堤”的视频在网上疯传。超市的货架，已经空了。",
-      nextId: "s4_2"
-    },
-    s4_2: {
-      bg: "bg_rumor", speaker: "网信办主任",
-      text: "视频是三年前的旧闻。可转发已经破百万，压不住了。",
-      nextId: "s4_2b"
-    },
-    s4_2b: {
-      speaker: "网信办主任",
-      text: "还配了一张红头文件，格式做得像真的。",
-      nextId: "s4_3"
-    },
-    s4_3: {
-      bg: "bg_rumor", speaker: "市长",
-      text: "水库到底什么情况？我不要“总体可控”，我要数字。",
-      nextId: "s4_4"
-    },
-    s4_4: {
-      bg: "bg_rumor", speaker: "水库管理员",
-      text: "水位离警戒线还有一米二。泄洪闸已经按预案预泄。",
-      nextId: "s4_5"
-    },
-    s4_5: {
-      bg: "bg_rumor", speaker: "公安局长",
-      text: "删帖、封号，技术上几分钟。要不要动手？",
-      nextId: "s4_5b"
-    },
-    s4_5b: {
-      speaker: "市长",
-      text: "先核实。给我一份老百姓看得懂的水库数据。",
-      nextId: "s4_6"
-    },
-    s4_6: {
-      bg: "bg_rumor", speaker: "秘书长",
-      text: "删得越快，信的人可能越多。可要是不删，下面的人又该说我们不管。",
-      nextId: "s4_choice"
-    },
-    s4_choice: {
-      bg: "bg_rumor", speaker: "市长",
-      text: "先别管网上。人已经堵到主干道了。",
-      options: [
+    "k2_1": {
+      "bg": "bg_community",
+      "scene": "第三幕 · 积水倒灌",
+      "speaker": "旁白",
+      "text": "家中出现积水倒灌，水位正在上涨。",
+      "options": [
         {
-          text: "先删帖封号，把声音压下去",
-          tag: "删帖控评",
-          effect: { morale: -15, casualties: 3 },
-          nextId: "r4a"
+          "text": "用盆舀水排空",
+          "tag": "舀水",
+          "effect": {
+            "morale": -3,
+            "casualties": 1
+          },
+          "nextId": "k2_bad"
         },
         {
-          text: "开直播，把水库亮给所有人看",
-          tag: "权威辟谣",
-          effect: { funds: -5, morale: 12 },
-          nextId: "r4b"
+          "text": "立即切断室内总电源、关闭燃气总阀",
+          "tag": "断电关气",
+          "effect": {
+            "morale": 3
+          },
+          "nextId": "k2_ok"
         }
       ]
     },
-    r4a: {
-      bg: "bg_rumor", speaker: "旁白",
-      text: "帖子没了，截图还在私群里飞。抢购的人挤在一起，踩伤了十几个。",
-      tip: {
-        title: "谣言处置的“黄金四小时”",
-        body: "突发事件中，谣言传播往往快于真相。处置要点是“快、准、透”：第一时间核实、第一时间发布，用事实占领舆论场。单纯删堵会造成“塔西佗陷阱”，让公众连真话也不信。恶意造谣可依法追责，但权威信息必须同步跟上。"
+    "k2_bad": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：积水漫过插座，漏电风险上升；燃气泄漏遇水更危险。人赤脚排水时可能触电。",
+      "tip": {
+        "title": "积水倒灌：先断电关气",
+        "body": "积水进入室内，先切断总电源、关闭燃气总阀，再排水。不要赤脚或湿手碰电器，不要站在积水中操作开关。燃气泄漏时不开灯、不打火，先开窗通风并撤离。"
       },
-      nextId: "s5_1"
+      "nextId": "k3_1"
     },
-    r4b: {
-      bg: "bg_rumor", speaker: "旁白",
-      text: "直播镜头对着水库标尺。水位一寸一寸报出来。在线人数破千万，抢购的人慢慢散了。",
-      tip: {
-        title: "权威发布为什么有效？",
-        body: "恐慌的本质是信息缺失。直播、数据、现场画面能提供“可验证的确定性”，比喊话更有效。发布时要讲清三件事：发生了什么、我们做了什么、你该怎么做。公开透明与依法治理并不矛盾，追责造谣者与发布真相要同时进行。"
+    "k2_ok": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：先切断总电源、关闭燃气总阀，再排水。人站在干燥处，没有发生触电和燃气泄漏。",
+      "tip": {
+        "title": "积水倒灌：先断电关气",
+        "body": "积水进入室内，先切断总电源、关闭燃气总阀，再排水。不要赤脚或湿手碰电器，不要站在积水中操作开关。燃气泄漏时不开灯、不打火，先开窗通风并撤离。"
       },
-      nextId: "s5_1"
+      "nextId": "k3_1"
     },
-
-    /* ---------------- 第五幕：致命平静 ---------------- */
-    s5_1: {
-      bg: "bg_eye", time: "0h", scene: "第五幕 · 致命平静", speaker: "旁白",
-      text: "0小时。台风登陆。风把广告牌撕下来，雨像整盆水往下泼。忽然，风雨停了。",
-      nextId: "s5_2"
-    },
-    s5_2: {
-      bg: "bg_eye", speaker: "气象局长",
-      text: "是台风眼。半小时后，另一侧眼壁压上来，风会反方向刮，更猛。",
-      nextId: "s5_3"
-    },
-    s5_3: {
-      bg: "bg_eye", speaker: "应急局长",
-      text: "监控里有人下楼拍照，还有人骑电动车往海边去。",
-      nextId: "s5_3b"
-    },
-    s5_3b: {
-      speaker: "应急局长",
-      text: "社区干部在楼下喊，风太大，喊破嗓子也没人听见。",
-      nextId: "s5_3c"
-    },
-    s5_3c: {
-      speaker: "市长",
-      text: "无人机调过去，沿江堤、沙滩循环喊。喇叭开到最大。",
-      nextId: "s5_4"
-    },
-    s5_4: {
-      bg: "bg_eye", speaker: "市长",
-      text: "广播、短信、警报，还能抢出多少时间？",
-      nextId: "s5_5"
-    },
-    s5_5: {
-      bg: "bg_eye", speaker: "气象局长",
-      text: "最多四十分钟。",
-      nextId: "s5_6"
-    },
-    s5_6: {
-      bg: "bg_eye", speaker: "秘书长",
-      text: "拉防空警报，怕引起恐慌；不拉，靠社区喊话，来不及。",
-      nextId: "s5_choice"
-    },
-    s5_choice: {
-      bg: "bg_eye", speaker: "市长",
-      text: "楼下已经有人走动了。",
-      options: [
+    "k3_1": {
+      "bg": "bg_community",
+      "scene": "第三幕 · 必须外出",
+      "speaker": "旁白",
+      "text": "当因特殊情况必须外出。",
+      "options": [
         {
-          text: "不拉警报，等风雨把人逼回去",
-          tag: "顺其自然",
-          effect: { casualties: 8, morale: -15 },
-          nextId: "r5a"
+          "text": "靠着树走吧，这样还能挡挡风",
+          "tag": "靠树挡风",
+          "effect": {
+            "morale": -3,
+            "casualties": 1
+          },
+          "nextId": "k3_bad"
         },
         {
-          text: "拉响全城警报，循环喊话",
-          tag: "拉响警报",
-          effect: { casualties: 1, morale: 4, funds: -5 },
-          nextId: "r5b"
+          "text": "避开大树、塔吊等危险区域",
+          "tag": "避开危险区",
+          "effect": {
+            "morale": 3
+          },
+          "nextId": "k3_ok"
         }
       ]
     },
-    r5a: {
-      bg: "bg_eye", speaker: "旁白",
-      text: "二十分钟后，另一侧眼壁压上来。街上的人被风推倒，广告牌砸下来，尖叫被风吞了。",
-      tip: {
-        title: "台风眼陷阱",
-        body: "台风眼是风暴中心的无雨区，直径可达数十公里。眼区过境时风雨骤停，但另一侧眼壁可能更强，风向还会突然反转。历史上大量伤亡发生在“平静期”外出。记住：台风眼不是结束，只是中场休息。警报没解除，人就不能出门。"
+    "k3_bad": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：树枝折断、广告牌坠落；塔吊和临时围挡在强风中可能倒塌。靠树挡风反而进入危险区。",
+      "tip": {
+        "title": "必须外出：避开树木、塔吊、广告牌",
+        "body": "台风天非必要不外出。必须外出时，避开大树、塔吊、脚手架、广告牌、临时围挡和积水路段；穿防滑鞋，远离断线和落地电线。不要靠树挡风。"
       },
-      nextId: "s6_1"
+      "nextId": "k4_1"
     },
-    r5b: {
-      bg: "bg_eye", speaker: "旁白",
-      text: "警报响彻全城。大喇叭一遍遍喊“台风眼不是结束”。有人骂着往回跑，也有人因此捡回一条命。",
-      tip: {
-        title: "警报要不要拉？",
-        body: "防灾警报的首要目标是“让人离开危险区”，哪怕造成短时恐慌，也比伤亡可控。日本、香港等地在台风眼过境时会强制推送紧急警报。关键是信息具体：说明危险时段、避险场所、解除信号，避免“狼来了”式的空警报。"
+    "k3_ok": {
+      "bg": "bg_community",
+      "speaker": "后果",
+      "text": "后果：沿坚固建筑外侧行走，避开树木、塔吊、广告牌和积水路段；穿防滑鞋，没有涉水。",
+      "tip": {
+        "title": "必须外出：避开树木、塔吊、广告牌",
+        "body": "台风天非必要不外出。必须外出时，避开大树、塔吊、脚手架、广告牌、临时围挡和积水路段；穿防滑鞋，远离断线和落地电线。不要靠树挡风。"
       },
-      nextId: "s6_1"
+      "nextId": "k4_1"
     },
-
-    /* ---------------- 终幕：灾后复盘 ---------------- */
-    s6_1: {
-      bg: "bg_disaster", time: "灾后", scene: "终幕 · 灾后复盘", speaker: "旁白",
-      text: "登陆后六小时。风雨停了，城市像被翻过一遍。新闻发布会还有十分钟。",
-      nextId: "s6_2"
-    },
-    s6_2: {
-      bg: "bg_disaster", speaker: "秘书长",
-      text: "记者问得很硬。预警是不是晚了？伤亡数字有没有瞒？",
-      nextId: "s6_2b"
-    },
-    s6_2b: {
-      speaker: "市长",
-      text: "先把所有数据给我。今天不绕。",
-      nextId: "s6_3"
-    },
-    s6_3: {
-      bg: "bg_press", speaker: "应急局长",
-      text: "最终统计，伤亡 {casualties} 人，可用资金 {funds}，民心指数 {morale}。",
-      nextId: "s6_4"
-    },
-    s6_4: {
-      bg: "bg_press", speaker: "记者",
-      text: "市长，如果重来一次，您会改哪个决定？",
-      nextId: "s6_4b"
-    },
-    s6_4b: {
-      bg: "bg_press", speaker: "记者",
-      text: "还有市民反映，安置点的物资到现在没发齐。",
-      nextId: "s6_5"
-    },
-    s6_5: {
-      bg: "bg_press", speaker: "市长",
-      text: "这个责任，我负。数据是多少，就报多少。",
-      nextId: "s6_choice"
-    },
-    s6_choice: {
-      bg: "bg_press", speaker: "市长",
-      text: "话筒给我。今天不绕。",
-      options: [
+    "k4_1": {
+      "bg": "bg_pump",
+      "time": "4h",
+      "scene": "第三幕 · 停电与复电",
+      "speaker": "旁白",
+      "text": "台风登陆前，供电部门会按预案分片拉闸停电；恢复送电要逐段试送。",
+      "options": [
         {
-          text: "认账，公布全部数据",
-          tag: "坦诚复盘",
-          effect: { morale: 8 },
-          nextId: "r6a"
+          "text": "等停电了再说，手机没电也无所谓",
+          "tag": "等停电再说",
+          "effect": {
+            "morale": -3,
+            "casualties": 1
+          },
+          "nextId": "k4_bad"
         },
         {
-          text: "先讲成绩，把责任推给天气",
-          tag: "推责天气",
-          effect: { morale: -10 },
-          nextId: "r6b"
+          "text": "提前充电、储水备药，冰箱调低",
+          "tag": "提前准备",
+          "effect": {
+            "morale": 3
+          },
+          "nextId": "k4_ok"
         }
       ]
     },
-    r6a: {
-      bg: "bg_press", speaker: "旁白",
-      text: "你站起来，鞠了一躬。伤亡、损失、整改，一项一项念完。台下安静了几秒。",
-      tip: {
-        title: "灾后复盘，复的是什么？",
-        body: "复盘不是追责大会，而是把“运气”变成“经验”：预警是否提前、转移是否彻底、物资是否到位、信息是否透明。每一次台风都是对城市韧性的压力测试。把问题清单变成整改清单，下一次才能少流一滴血。"
+    "k4_bad": {
+      "bg": "bg_pump",
+      "speaker": "后果",
+      "text": "后果：停电后手机失联，冰箱药品失温，电梯困人；恢复送电时线路带病合闸还可能起火。",
+      "tip": {
+        "title": "计划停电与复电安全",
+        "body": "台风前供电部门会按预案分片拉闸，防止倒树压线、积水触电和短路起火。提前给手机、充电宝充电，储水备药，冰箱调低。停电后不碰断线，不自行合闸；发电机放在室外通风处。恢复送电逐段试送，是为了定位故障、避免短路起火。"
       },
-      nextId: "@ending"
+      "nextId": "s4_1"
     },
-    r6b: {
-      bg: "bg_press", speaker: "旁白",
-      text: "你把责任推给“百年一遇”。台下有人举手：预警三天前就发了。会场一下静了。",
-      tip: {
-        title: "复盘，从说真话开始",
-        body: "把责任推给“百年一遇”，是最省事也最危险的总结。灾害等级可以超预期，但应急准备不能没有上限。公开伤亡与损失，接受质询，才能修复信任。复盘的价值不在解释过去，而在改变下一次。"
+    "k4_ok": {
+      "bg": "bg_pump",
+      "speaker": "后果",
+      "text": "后果：提前充电、储水、备药；停电后不碰断线，不自行合闸；发电机放在室外通风处。",
+      "tip": {
+        "title": "计划停电与复电安全",
+        "body": "台风前供电部门会按预案分片拉闸，防止倒树压线、积水触电和短路起火。提前给手机、充电宝充电，储水备药，冰箱调低。停电后不碰断线，不自行合闸；发电机放在室外通风处。恢复送电逐段试送，是为了定位故障、避免短路起火。"
       },
-      nextId: "@ending"
+      "nextId": "s4_1"
+    },
+    "s4_1": {
+      "bg": "bg_rumor",
+      "time": "4h",
+      "speaker": "旁白",
+      "text": "距登陆4小时。“青龙水库决堤”的视频在网上疯传。超市的货架，已经被抢购一空。",
+      "scene": "第四幕 · 信息恐慌",
+      "nextId": "s4_2"
+    },
+    "s4_2": {
+      "bg": "bg_rumor",
+      "speaker": "网信办主任",
+      "text": "视频是三年前的旧闻。丧心病狂的营销号和不知情的网民受到恐慌情绪影响，大量转发，现在已经破百万。",
+      "nextId": "s4_2b"
+    },
+    "s4_2b": {
+      "speaker": "网信办主任",
+      "text": "现在，恐慌情绪正在向全市蔓延。",
+      "nextId": "s4_3"
+    },
+    "s4_3": {
+      "bg": "bg_rumor",
+      "speaker": "市长",
+      "text": "水库现在具体什么情况？能不能保证安全？",
+      "nextId": "s4_4"
+    },
+    "s4_4": {
+      "bg": "bg_rumor",
+      "speaker": "水库管理员",
+      "text": "水位离警戒线还有一米二，泄洪闸也已经按预案预泄。",
+      "nextId": "s4_5"
+    },
+    "s4_5": {
+      "bg": "bg_rumor",
+      "speaker": "公安局长",
+      "text": "要删帖、封号，先把舆论控制下来吗？",
+      "nextId": "s4_6"
+    },
+    "s4_6": {
+      "bg": "bg_rumor",
+      "speaker": "秘书长",
+      "text": "如果删了，盲目相信的人可能反而更多。可要是不删，恐慌的情绪又会造成更大的损害。",
+      "options": [
+        {
+          "text": "先删帖封号，把声音压下去",
+          "tag": "删帖控评",
+          "effect": {
+            "morale": -15,
+            "casualties": 3
+          },
+          "nextId": "r4a"
+        },
+        {
+          "text": "封禁营销号，同时直播水库现场情况",
+          "tag": "权威辟谣",
+          "effect": {
+            "funds": -5,
+            "morale": 12
+          },
+          "nextId": "r4b"
+        }
+      ]
+    },
+    "r4a": {
+      "bg": "bg_rumor",
+      "speaker": "旁白",
+      "text": "帖子没了，截图还在私群里疯传。抢购的人挤在超市里，造成严重的踩踏事故。",
+      "tip": {
+        "title": "谣言处置的“黄金四小时”",
+        "body": "突发事件中，谣言传播往往快于真相。处置要点是“快、准、透”：第一时间核实、第一时间发布，用事实占领舆论场。单纯删堵会造成“塔西佗陷阱”，让公众连真话也不信。恶意造谣可依法追责，但权威信息必须同步跟上。"
+      },
+      "nextId": "r6b_1"
+    },
+    "r4b": {
+      "bg": "bg_rumor",
+      "speaker": "旁白",
+      "text": "直播镜头对着水库现场，极大地稳定了民心。",
+      "tip": {
+        "title": "权威发布为什么有效？",
+        "body": "恐慌的本质是信息缺失。直播、数据、现场画面能提供“可验证的确定性”，比喊话更有效。发布时要讲清三件事：发生了什么、我们做了什么、你该怎么做。公开透明与依法治理并不矛盾，追责造谣者与发布真相要同时进行。"
+      },
+      "nextId": "r6a_1"
+    },
+    "r6a_1": {
+      "bg": "bg_press",
+      "speaker": "结果",
+      "text": "本次救灾任务完成情况良好。在全城共同努力下，滨江度过了这次难关。",
+      "tip": {
+        "title": "灾后复盘，复的是什么？",
+        "body": "复盘不是追责大会，而是把“运气”变成“经验”：预警是否提前、转移是否彻底、物资是否到位、信息是否透明。每一次台风都是对城市韧性的压力测试。把问题清单变成整改清单，下一次才能少流一滴血。"
+      },
+      "scene": "终幕 · 灾后结果",
+      "nextId": "r6a_2"
+    },
+    "r6a_2": {
+      "speaker": "结果",
+      "text": "我们为在救灾中挺身而出的救灾官兵表示感谢，为在灾难中丧失生命和财产的人民群众默哀。",
+      "nextId": "@ending"
+    },
+    "r6b_1": {
+      "bg": "bg_press",
+      "speaker": "结果",
+      "text": "干部干部，干字当头；领导领导，领字为先。习近平总书记指出：“领导干部在各个方面坚持以身作则、以上率下是一种有效的领导方法和工作方法”。",
+      "tip": {
+        "title": "复盘，从说真话开始",
+        "body": "把责任推给“百年一遇”，是最省事也最危险的总结。灾害等级可以超预期，但应急准备不能没有上限。公开伤亡与损失，接受质询，才能修复信任。复盘的价值不在解释过去，而在改变下一次。"
+      },
+      "scene": "终幕 · 灾后结果",
+      "nextId": "r6b_2"
+    },
+    "r6b_2": {
+      "speaker": "结果",
+      "text": "领导干部如果只想揽权不想担责，只想当官不愿干事，遇事就当“甩手掌柜”，有事就搞“击鼓传花”，这样肯定难以得到人民群众的拥护和支持。",
+      "nextId": "r6b_3"
+    },
+    "r6b_3": {
+      "speaker": "结果",
+      "text": "谨记领导需有力、组织要有方，无功便是过、平庸就是错，做到任务面前不摆手、困难面前不缩手、全力以赴不甩手、事不干成不撒手。",
+      "nextId": "r6b_4"
+    },
+    "r6b_4": {
+      "speaker": "结果",
+      "text": "这样才能形成一级带一级的优良干事创业氛围。",
+      "nextId": "@ending"
     }
   }
 };
@@ -1571,6 +1709,8 @@ let tipOpen = false;
 let pendingNextId = null;
 let gameStarted = false;
 let gameEnded = false;
+let fullscreenPromptShown = false;
+let fullscreenPromptOpen = false;
 
 const decisions = [];
 const tipsSeen = new Set();
@@ -1600,6 +1740,9 @@ const tipBody = document.getElementById("tip-body");
 const tipClose = document.getElementById("tip-close");
 const titleScreen = document.getElementById("title-screen");
 const startBtn = document.getElementById("start-btn");
+const fsPrompt = document.getElementById("fs-prompt");
+const fsEnter = document.getElementById("fs-enter");
+const fsSkip = document.getElementById("fs-skip");
 const endingScreen = document.getElementById("ending-screen");
 const endingGrade = document.getElementById("ending-grade");
 const endingTitle = document.getElementById("ending-title");
@@ -1983,7 +2126,7 @@ function showEnding() {
   if (state.casualties <= 5 && state.morale >= 85 && state.funds >= 30) {
     grade = "S";
     title = "完美应对";
-    desc = "预警及时，转移彻底，信息透明。你用专业与担当，把一场可能的灾难压到了最低。这座城，欠你一句谢谢。";
+    desc = "预警及时，转移彻底，信息透明。你用专业与担当，把一场可能的灾难压到了最低。你完美履行了市长的职责！";
     gradeClass = "grade-s";
   } else if (state.casualties <= 15 && state.morale >= 40) {
     grade = "A";
@@ -2046,16 +2189,25 @@ function showEnding() {
 /* ============================================================
    八、开始、重开与移动端横屏
    ============================================================ */
-async function tryLandscape() {
-  // 只在触屏设备上尝试全屏 + 横屏锁定；失败则用 CSS 竖屏提示兜底
-  if (!window.matchMedia("(pointer: coarse)").matches) return;
+function isMobileFullscreenCandidate() {
+  return window.matchMedia("(pointer: coarse)").matches &&
+    window.matchMedia("(max-width: 1024px)").matches;
+}
 
+function shouldShowFullscreenPrompt() {
+  return !fullscreenPromptShown &&
+    !document.fullscreenElement &&
+    isMobileFullscreenCandidate() &&
+    Boolean(document.documentElement.requestFullscreen);
+}
+
+async function requestMobileFullscreen() {
   try {
     if (document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen({ navigationUI: "hide" });
     }
   } catch (error) {
-    // 浏览器可能拒绝全屏，忽略即可
+    // 浏览器可能拒绝全屏，忽略并继续进入游戏
   }
 
   try {
@@ -2065,6 +2217,21 @@ async function tryLandscape() {
   } catch (error) {
     // 不支持方向锁定时由 #rotate-overlay 提示
   }
+}
+
+function showFullscreenPrompt() {
+  fullscreenPromptOpen = true;
+  fullscreenPromptShown = true;
+  titleScreen.classList.add("hidden");
+  fsPrompt.classList.remove("hidden");
+  fsEnter.focus({ preventScroll: true });
+}
+
+function finishFullscreenPrompt() {
+  fullscreenPromptOpen = false;
+  fsPrompt.classList.add("hidden");
+  titleScreen.classList.remove("hidden");
+  startBtn.focus({ preventScroll: true });
 }
 
 function resetState() {
@@ -2082,9 +2249,11 @@ function resetState() {
   updateHUD();
 }
 
-function startGame() {
+function beginGame() {
   if (gameStarted) return;
 
+  fullscreenPromptOpen = false;
+  fsPrompt.classList.add("hidden");
   resetState();
   gameStarted = true;
   gameEnded = false;
@@ -2093,9 +2262,19 @@ function startGame() {
   uiBottom.classList.remove("hidden");
   uiBottom.classList.remove("fade-out");
 
-  // 不阻塞剧情渲染；移动端若支持则自动进入横屏全屏
-  tryLandscape();
   renderNode(gameData.startId);
+}
+
+function startGame() {
+  if (gameStarted) return;
+  beginGame();
+}
+
+async function enterFullscreenAndShowTitle() {
+  fsEnter.disabled = true;
+  await requestMobileFullscreen();
+  fsEnter.disabled = false;
+  finishFullscreenPrompt();
 }
 
 function restartGame() {
@@ -2124,8 +2303,14 @@ function restartGame() {
    九、事件绑定与初始化
    ============================================================ */
 startBtn.addEventListener("click", startGame);
+fsEnter.addEventListener("click", enterFullscreenAndShowTitle);
+fsSkip.addEventListener("click", finishFullscreenPrompt);
 restartBtn.addEventListener("click", restartGame);
 tipClose.addEventListener("click", closeTip);
+
+if (shouldShowFullscreenPrompt()) {
+  showFullscreenPrompt();
+}
 
 portraitImg.addEventListener("error", () => {
   portraitImg.classList.remove("show");
